@@ -152,30 +152,30 @@ Sensor Stream (DVS events, images, velocities)
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│  HDC Encoder                                     │
+│  HDC Encoder                                    │
 │  (Position keys, intensity keys, permutations,  │
-│   fractional power, velocity basis vectors,      │
-│   temporal sequences via permute-and-XOR)        │
-│                                                   │
-│  "Push the job onto encoding"                     │
+│   fractional power, velocity basis vectors,     │
+│   temporal sequences via permute-and-XOR)       │
+│                                                 │
+│  "Push the job onto encoding"                   │
 └─────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│  Associative Memory                               │
-│  memory = Σ bind(percept, action)                │
-│  "Save counts as super position"                  │
-│  "Train online"                                    │
+│  Associative Memory                             │
+│  memory = Σ bind(percept, action)               │
+│  "Save counts as super position"                │
+│  "Train online"                                 │
 └─────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│  Inference (Equation 4)                           │
+│  Inference (Equation 4)                         │
 │  p(v_i) = 1 - H_n(bind(m, v_i), d)              │
-│  For Classifier:                                  │
-│  unbound = XOR(memory, percept)                  │
-│  class = argmin Hamming(unbound, candidates)     │
-│  "See either more ones or more zeros"             │
+│  For Classifier:                                │
+│  unbound = XOR(memory, percept)                 │
+│  class = argmin Hamming(unbound, candidates)    │
+│  "See either more ones or more zeros"           │
 └─────────────────────────────────────────────────┘
     │
     ▼
