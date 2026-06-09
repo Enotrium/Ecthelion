@@ -89,6 +89,25 @@ from hap.hap import (
     HyperdimensionalActivePerception,
     EgoMotionEstimator,
 )
+from hap.sparse_hdc import (
+    gen_sparse_hvs,
+    cdt,
+    sparse_bundle,
+    sparse_majority,
+    sparse_bind,
+    gen_sparse_basis,
+    sparse_similarity,
+    sparse_overlap,
+    estimate_energy_sparse,
+)
+from hap.data_structures import (
+    GraphEncoder,
+    TreeEncoder,
+    FSAEncoder,
+    NGramEncoder,
+    FrequencyEncoder,
+    StackEncoder,
+)
 
 __all__ = [
     # Core
@@ -103,4 +122,11 @@ __all__ = [
     "HDCClassifier", "RefineHDLearner",
     # HAP
     "HyperdimensionalActivePerception", "EgoMotionEstimator",
+    # Sparse HDC
+    "gen_sparse_hvs", "cdt", "sparse_bundle", "sparse_majority",
+    "sparse_bind", "gen_sparse_basis", "sparse_similarity",
+    "sparse_overlap", "estimate_energy_sparse",
+    # Data Structures
+    "GraphEncoder", "TreeEncoder", "FSAEncoder",
+    "NGramEncoder", "FrequencyEncoder", "StackEncoder",
 ]
