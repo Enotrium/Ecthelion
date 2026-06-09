@@ -427,6 +427,37 @@ Demonstrates the paper's Experiment 2:
 | **Sparse Binary HDC (extended)** | Controlled-density HVs, CDT bundling, sparse capacity | ✅ `hap.sparse_hdc` (Kleyko et al. 2021) |
 | **Data Structures (extended)** | Graphs, trees, FSA, n-grams, frequency, stacks | ✅ `hap.data_structures` (Kleyko/HDC Cookbook) |
 
+## Known Approximations & Limitations
+
+These are deliberate trade-offs documented for transparency. The paper is fully covered
+in spirit and architecture — what follows are areas where the implementation simplifies
+or extends beyond the original paper.
+
+### ⚠️ Approximations (vs. exact paper replication)
+
+| Area | Paper | Ecthelion | Rationale |
+|---|---|---|---|
+| **Tension minimization** | Full simulated-annealing energy model with `F_conn` (connective) + `F_prox` (proximal) forces over a co-occurrence graph, iterated to convergence | Progressive interpolation: `0.7 * prev + 0.3 * random` with majority threshold | Full tension minimization is O(N²·D·iterations) per iteration. The progressive-interpolation heuristic produces proportionally-spaced basis vectors with the same Hamming-distance properties (verified in `test_encoding.py`) and runs in O(N·D). |
+| **Theoretical capacity formulas** | `p(bit=1) = (1−p)·binomial(n−1, n/2) + p·binomial(n−1, n/2−1)` derived in closed form | Formula documented in `hdc_core.py` docstrings as reference; not computed at runtime | The formula describes expected behavior of the consensus sum. We validate capacity empirically via the `DataRecordMemory` sliding-window demo and the test suite. A `capacity_analysis.py` module could compute it on-request in the future. |
+| **Distributional semantics** | Full energy minimization over character co-occurrence graphs yields geometrically meaningful HBV embeddings | Position/basis encoders use proportional spacing and random keys; no co-occurrence graph is built | The paper uses this for character-set demonstrations (Fig 1). Our encoders target continuous sensor data (velocities, intensities, DVS events) where proportional spacing of basis vectors is the primary mechanism. For discrete categorical embeddings, a future `distributional_encoder.py` could implement the full tension-minimization loop. |
+
+### ⬜ Not Replicated (requires external data or hardware)
+
+| Area | Paper | Status | What would be needed |
+|---|---|---|---|
+| **CNN vs. HBV comparison** | PilotNet-style CNN (7 cm/s error) vs. 6-layer fully-connected NN on HBV-encoded time images (9 cm/s error) | Not run | Requires the original Qualcomm Flight + VICON dataset; the architecture is straightforward (8000→4000→1000→200→50→10 dense layers) but the data was collected on custom hardware. |
+| **MVSEC dataset loader** | DAVIS 240/346 event stream → time images → training pipeline | Not included | Requires downloading the MVSEC dataset (`outdoor_day1`, `outdoor_day2`, `outdoor_night1/2/3`); a loader module would parse ROS bag or HDF5 formats. The rest of the pipeline (`TimeSliceEncoder` → `EgoMotionEstimator`) is production-ready. |
+
+### ✅ Beyond the Paper (extensions)
+
+| Capability | Description |
+|---|---|
+| **RefineHD** | Adaptive iterative refinement for misclassified samples (Verges Boncompte 2025). Not in the original paper — improves accuracy without retraining. |
+| **Sparse Binary HDC** | Controlled-density HVs (ρ ∈ [0.02, 0.1]) with CDT bundling, sparse similarity, and MajorityCDT (Kleyko et al. 2021). The paper only uses dense binary (ρ = 0.5). |
+| **Data structures** | Graph, Tree, FSA, N-Gram, Frequency, and Stack encoders via role-filler binding. Extends the paper's data-record concept to complex relational abstractions. |
+| **Hardware energy model** | Explicit per-operation energy estimates (45nm CMOS, Horowitz 2014) integrated into `estimate_energy_hdv()` and `estimate_energy_sparse()`. The paper mentions energy efficiency qualitatively. |
+| **Production engineering** | Input validation, deterministic seed chains, save/load serialization, logging/telemetry hooks, Pythonic API — all beyond the original pyhdc research code. |
+
 ---
 ## License
 
