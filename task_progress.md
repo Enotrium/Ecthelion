@@ -1,0 +1,22 @@
+# Task Progress: Production HDC Codebase from eaaw6736.full.pdf
+
+- [x] Read and analyze paper "Learning Sensorimotor Control with Neuromorphic Sensors: Toward Hyperdimensional Active Perception"
+- [x] Read Peter Sutor interview for deeper HDC context
+- [x] Explore existing Arthedain codebase for patterns
+- [x] Design architecture for production-ready HDC codebase
+- [ ] Create project structure (pyproject.toml, requirements, README)
+- [ ] Implement core HDC primitives (gen_hvs, XOR, popcount, bind, bundle, permute, consensus sum)
+- [ ] Implement image/time-slice encoding (position keys × intensity keys)
+- [ ] Implement sequence encoding (permute-and-XOR temporal binding)
+- [ ] Implement numeric/velocity encoding (basis vectors with fractional steps)
+- [ ] Implement associative memory (data records, bind input→output, consensus sum)
+- [ ] Implement online learning (single-pass superposition, RefineHD)
+- [ ] Implement action-perception binding (HAP core: memory = Σ bind(percept_hv, action_hv))
+- [ ] Implement inference (unbind query, nearest-neighbor)
+- [ ] Implement DVS event encoding (spatiotemporal)
+- [ ] Implement hardware energy profiling
+- [ ] Create demo: synthetic ego-motion estimation (MVSEC-style)
+- [ ] Create demo: online 4-class learning
+- [ ] Write comprehensive tests
+- [ ] Create README with full documentation
+- [ ] Verify everything runs end-to-end
