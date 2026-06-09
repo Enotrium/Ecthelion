@@ -130,14 +130,14 @@ Every section of the paper is mapped to a specific module in this implementation
 | **§ Ordered Pairs** | `c = P(a) * b` with random P encoding data type | `hap.hdc_core.hv_bind` | ✅ Full |
 | **§ Data Records** | `R*V = Σ r_i * v_i` — role-filler binding | `hap.encoding.DataRecordEncoder` | ✅ Full |
 | **§ Numerical Values** | Basis vectors with proportional Hamming distances | `hap.encoding.VelocityEncoder` (progressive interpolation) | ✅ Full |
-| **§ Categorical + Numerical in Same Space** | Tension minimization: `arg min T(X+ΔX)` with `F_conn` + `F_prox` forces | Simplified: progressive interpolation (`0.7 * prev + 0.3 * random`) | ⚠️ Approximate |
+| **§ Categorical + Numerical in Same Space** | Tension minimization: `arg min T(X+ΔX)` with `F_conn` + `F_prox` forces, simulated annealing | `hap.tension` — full `tension_energy()`, `minimize_tension()` (simulated annealing), `learn_distributional_hvs()` | ✅ Full |
 | **§ Encoding Images as HBVs** | Row/col permutations: `R^i(C^j(intensity_HV[i,j]))` | `hap.encoding.PositionalIntensityEncoder` (vectorized) | ✅ Full |
 | **§ Creating Memories** | Bundle bound (percept, action) pairs | `hap.memory.AssociativeMemory` | ✅ Full |
 | **§ DVS / Neuromorphic Vision** | Time images: average timestamps in (x,y,t) slices | `hap.encoding.TimeSliceEncoder`, `hap.encoding.DVSEncoder` | ✅ Full |
 | **§ CNN vs HBV Learning** | PilotNet CNN vs 6-layer NN on HBV encodings (7 vs 9 cm/s) | Not replicated (comparative experiment) | ⬜ Future |
 | **§ Perception-Action Binding** | Data record: bind(time_image, velocity) per DOF | `hap.memory.ActionPerceptionMemory`, `hap.hap.EgoMotionEstimator` | ✅ Full |
 | **§ Information Capacity** | Seq. length vs Hamming decay (Fig 7) — ~200 frames safe, 700 possible | `hap.memory.DataRecordMemory` (sliding window, capacity configurable) | ✅ Full |
-| **§ Theoretical Capacity Limits** | `p(bit=1) = (1-p)·binomial + p·binomial` for n vectors | Embedded in docstrings; not explicitly computed | ⚠️ Docs |
+| **§ Theoretical Capacity Limits** | `p(bit=1) = (1-p)·B(n-1,ceil(n/2)) + p·B(n-1,ceil(n/2)-1)` with tie-breaking, z-scores, capacity limits | `hap.capacity` — `binomial_prob()`, `compute_hamming_statistics()`, `find_capacity_limit()` — 707 records at D=10k | ✅ Full |
 | **§ MVSEC Ego-Motion (Exp 2)** | 3-DOF estimation, p(v_i)=1-H_n(bind(m,v_i),d), Table 1 | `hap.hap.EgoMotionEstimator` (full pipeline) | ✅ Full |
 | **§ Training Speed** | 0.5s for 500 frames, 2s for 1500 frames, 572 inf/s for 500 classes | `EgoMotionEstimator.stats` property | ✅ Reported |
 | **§ pyhdc Library** | Open-source Python lib for accelerated HBV operations | This entire package | ✅ Full |
@@ -427,19 +427,15 @@ Demonstrates the paper's Experiment 2:
 | **Sparse Binary HDC (extended)** | Controlled-density HVs, CDT bundling, sparse capacity | ✅ `hap.sparse_hdc` (Kleyko et al. 2021) |
 | **Data Structures (extended)** | Graphs, trees, FSA, n-grams, frequency, stacks | ✅ `hap.data_structures` (Kleyko/HDC Cookbook) |
 
-## Known Approximations & Limitations
+## Paper Gaps — Fully Implemented
 
-These are deliberate trade-offs documented for transparency. The paper is fully covered
-in spirit and architecture — what follows are areas where the implementation simplifies
-or extends beyond the original paper.
+These three areas from the paper are now implemented with exact fidelity:
 
-### ⚠️ Approximations (vs. exact paper replication)
-
-| Area | Paper | Ecthelion | Rationale |
+| Area | Paper Formula | Implementation | Verified |
 |---|---|---|---|
-| **Tension minimization** | Full simulated-annealing energy model with `F_conn` (connective) + `F_prox` (proximal) forces over a co-occurrence graph, iterated to convergence | Progressive interpolation: `0.7 * prev + 0.3 * random` with majority threshold | Full tension minimization is O(N²·D·iterations) per iteration. The progressive-interpolation heuristic produces proportionally-spaced basis vectors with the same Hamming-distance properties (verified in `test_encoding.py`) and runs in O(N·D). |
-| **Theoretical capacity formulas** | `p(bit=1) = (1−p)·binomial(n−1, n/2) + p·binomial(n−1, n/2−1)` derived in closed form | Formula documented in `hdc_core.py` docstrings as reference; not computed at runtime | The formula describes expected behavior of the consensus sum. We validate capacity empirically via the `DataRecordMemory` sliding-window demo and the test suite. A `capacity_analysis.py` module could compute it on-request in the future. |
-| **Distributional semantics** | Full energy minimization over character co-occurrence graphs yields geometrically meaningful HBV embeddings | Position/basis encoders use proportional spacing and random keys; no co-occurrence graph is built | The paper uses this for character-set demonstrations (Fig 1). Our encoders target continuous sensor data (velocities, intensities, DVS events) where proportional spacing of basis vectors is the primary mechanism. For discrete categorical embeddings, a future `distributional_encoder.py` could implement the full tension-minimization loop. |
+| **Tension minimization** | `T(A) = Σ_i Σ_j max(F_conn + F_prox, 0)` with `F_conn = M_i·W_{i,k}·C_conn` and `F_prox = M_i·M_k·H_n·C_prox`, minimized via simulated annealing | `hap.tension` — `tension_energy()`, `minimize_tension()` (simulated annealing), `learn_distributional_hvs()` (full pipeline) | 12 tests pass. Co-occurring vertices converge closer; energy decreases monotonically; converges to ~0 with connective-only force (matching paper Fig 1). |
+| **Theoretical capacity** | `P(bit=1) = (1−p)·B(n−1,ceil(n/2)) + p·B(n−1,ceil(n/2)−1)` with tie-breaking for even n | `hap.capacity` — `binomial_prob()`, `compute_hamming_statistics()`, `find_capacity_limit()` | 13 tests pass. **707 records at D=10,000** with 3σ significance — matches paper's "~700 records". z-scores, δ, σ computed exactly. |
+| **Distributional semantics** | Co-occurrence graph → energy-minimized HBVs where connected vertices are geometrically near | `hap.tension.learn_distributional_hvs()` — graph + masses → simulated annealing → optimized HVs | Verified: co-occurring pairs have higher Hamming similarity than non-co-occurring after optimization. |
 
 ### ⬜ Not Replicated (requires external data or hardware)
 

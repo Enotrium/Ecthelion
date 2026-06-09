@@ -108,6 +108,19 @@ from hap.data_structures import (
     FrequencyEncoder,
     StackEncoder,
 )
+from hap.tension import (
+    tension_energy,
+    minimize_tension,
+    build_cooc_graph,
+    build_masses,
+    learn_distributional_hvs,
+)
+from hap.capacity import (
+    binomial_prob,
+    compute_hamming_statistics,
+    capacity_curve,
+    find_capacity_limit,
+)
 
 __all__ = [
     # Core
@@ -129,4 +142,10 @@ __all__ = [
     # Data Structures
     "GraphEncoder", "TreeEncoder", "FSAEncoder",
     "NGramEncoder", "FrequencyEncoder", "StackEncoder",
+    # Tension Minimization
+    "tension_energy", "minimize_tension", "build_cooc_graph",
+    "build_masses", "learn_distributional_hvs",
+    # Capacity Analysis
+    "binomial_prob", "compute_hamming_statistics", "capacity_curve",
+    "find_capacity_limit",
 ]
