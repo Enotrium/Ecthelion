@@ -20,10 +20,14 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-      - run: uv pip install --system ruff mypy
-      - run: ruff check hap/ tests/
-      - run: ruff format --check hap/ tests/
-      - run: mypy hap/ --ignore-missing-imports --no-error-summary || true
+      - name: Install dependencies
+        run: uv sync --group dev
+      - name: Run ruff check
+        run: uv run ruff check hap/ tests/
+      - name: Run ruff format check
+        run: uv run ruff format --check hap/ tests/
+      - name: Run mypy
+        run: uv run mypy hap/ --ignore-missing-imports --no-error-summary || true
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -38,11 +42,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: |
-          uv pip install --system .[all]
+        run: uv sync --group dev
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/ -v --tb=short --cov=hap --cov-report=term-missing --cov-report=xml --cov-fail-under=75
+          uv run pytest tests/ -v --tb=short --cov=hap --cov-report=term-missing --cov-report=xml --cov-fail-under=75
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@v5
@@ -62,17 +65,18 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
+      - name: Install build tools
+        run: uv sync --group dev
       - name: Build package
-        run: |
-          uv pip install --system build twine
-          python -m build
+        run: uv run python -m build
       - name: Validate package
         run: |
-          python -m twine check dist/*
+          uv pip install twine --quiet
+          uv run python -m twine check dist/*
       - name: Install from wheel and run smoke test
         run: |
-          uv pip install --system dist/*.whl
-          python -c "from hap import gen_hvs, hv_xor, hv_bundle, hv_permute, hv_hamming_sim; hvs=gen_hvs(10,1000,seed=1); assert hv_hamming_sim(hvs[0],hvs[1]) != 1.0; print('PASS')"
+          uv pip install dist/*.whl --quiet
+          uv run python -c "from hap import gen_hvs, hv_xor, hv_bundle, hv_permute, hv_hamming_sim; hvs=gen_hvs(10,1000,seed=1); assert hv_hamming_sim(hvs[0],hvs[1]) != 1.0; print('PASS')"
 
   docker:
     name: Docker Build
