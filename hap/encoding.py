@@ -354,18 +354,18 @@ class VelocityEncoder(nn.Module):
         # of bits — avoiding the recursive-collapse problem where
         # 0.7·prev + 0.3·new converges to a single vector.
         if n_basis == 1:
-            anchor = hv_majority(gen_hvs(1, dim, mode, self.device, seed)[0])
+            anchor = hv_majority(gen_hvs(1, dim, mode, self.device, seed)[0], mode)
             levels = [anchor]
         else:
             anchors = gen_hvs(2, dim, mode, self.device, seed)
-            anchor_a = hv_majority(anchors[0])
-            anchor_b = hv_majority(anchors[1])
+            anchor_a = hv_majority(anchors[0], mode)
+            anchor_b = hv_majority(anchors[1], mode)
             levels = []
             for i in range(n_basis):
                 t = i / (n_basis - 1)  # 0 → anchor_a, 1 → anchor_b
                 # Fraction of anchor_b bits to flip into anchor_a
                 mixed = (1.0 - t) * anchor_a + t * anchor_b
-                levels.append(hv_majority(mixed))
+                levels.append(hv_majority(mixed, mode))
 
         self.register_buffer("basis", torch.stack(levels))
         self.n_basis = n_basis
