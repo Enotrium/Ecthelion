@@ -457,4 +457,4 @@ These three areas from the paper are now implemented with exact fidelity:
 ---
 ## License
 
-Confidential
+Confidential, Proprietary ( Enotrium does not authorize for model training)
