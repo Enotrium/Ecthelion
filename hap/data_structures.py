@@ -1,5 +1,4 @@
-"""
-HDC Data Structure Representations — Graphs, Trees, FSA, N-Grams
+"""HDC Data Structure Representations — Graphs, Trees, FSA, N-Grams
 ===============================================================
 Extends the data record / set / sequence primitives from the paper
 into more complex relational abstractions.
@@ -27,18 +26,16 @@ Each structure supports:
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import torch
 
 from hap.hdc_core import (
     gen_hvs,
-    hv_xor,
     hv_bind,
     hv_bundle,
-    hv_permute,
-    hv_batch_sim,
     hv_hamming_sim,
+    hv_permute,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +44,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. GraphEncoder — Directed & Undirected Graphs
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class GraphEncoder:
     """Encode graphs as HVs via edge-binding + role permutations.
@@ -71,8 +69,8 @@ class GraphEncoder:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.mode = mode
@@ -80,7 +78,7 @@ class GraphEncoder:
         self.seed = seed or 42
 
         # Vocabulary: maps vertex/key names to HVs
-        self._vertices: Dict[str, torch.Tensor] = {}
+        self._vertices: dict[str, torch.Tensor] = {}
         self._seed_counter = seed or 42
 
     def add_vertex(self, name: str) -> torch.Tensor:
@@ -94,7 +92,10 @@ class GraphEncoder:
         """
         if name not in self._vertices:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._vertices),
             ).squeeze(0)
             self._vertices[name] = hv
@@ -102,7 +103,7 @@ class GraphEncoder:
 
     def encode(
         self,
-        edges: List[Tuple[str, str]],
+        edges: list[tuple[str, str]],
         directed: bool = False,
     ) -> torch.Tensor:
         """Encode a graph into a single HV.
@@ -133,9 +134,9 @@ class GraphEncoder:
 
         return hv_bundle(torch.stack(edge_hvs))
 
-    def outgoing(self, graph_hv: torch.Tensor,
-                 vertex_name: str,
-                 candidates: List[str]) -> List[Tuple[str, float]]:
+    def outgoing(
+        self, graph_hv: torch.Tensor, vertex_name: str, candidates: list[str]
+    ) -> list[tuple[str, float]]:
         """Find outgoing connections from a vertex.
 
         For undirected: unbind(graph, v) ≈ sum of connected vertices
@@ -165,9 +166,9 @@ class GraphEncoder:
         sims.sort(key=lambda x: x[1], reverse=True)
         return sims
 
-    def incoming(self, graph_hv: torch.Tensor,
-                 vertex_name: str,
-                 candidates: List[str]) -> List[Tuple[str, float]]:
+    def incoming(
+        self, graph_hv: torch.Tensor, vertex_name: str, candidates: list[str]
+    ) -> list[tuple[str, float]]:
         """Find incoming connections to a vertex (directed only).
 
         unbind(graph, permute(v)) ≈ sum of source vertices
@@ -201,13 +202,14 @@ class GraphEncoder:
         return sims
 
     @property
-    def vertices(self) -> List[str]:
+    def vertices(self) -> list[str]:
         return list(self._vertices.keys())
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2. TreeEncoder — Hierarchical Path → Symbol
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TreeEncoder:
     """Encode binary trees via role-filler binding on paths.
@@ -235,8 +237,8 @@ class TreeEncoder:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.mode = mode
@@ -248,14 +250,17 @@ class TreeEncoder:
         self._role_right = gen_hvs(1, dim, mode, self.device, self.seed + 1).squeeze(0)
 
         # Symbol HVs (created on demand)
-        self._symbols: Dict[str, torch.Tensor] = {}
+        self._symbols: dict[str, torch.Tensor] = {}
         self._seed_counter = self.seed + 10
 
     def add_symbol(self, name: str) -> torch.Tensor:
         """Register a symbol HV."""
         if name not in self._symbols:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._symbols),
             ).squeeze(0)
             self._symbols[name] = hv
@@ -288,7 +293,7 @@ class TreeEncoder:
 
         return path_hv
 
-    def encode(self, tree_entries: List[Tuple[str, List[str]]]) -> torch.Tensor:
+    def encode(self, tree_entries: list[tuple[str, list[str]]]) -> torch.Tensor:
         """Encode a tree from (symbol, path) entries.
 
         Args:
@@ -310,9 +315,9 @@ class TreeEncoder:
 
         return hv_bundle(torch.stack(records))
 
-    def symbol_at_path(self, tree_hv: torch.Tensor,
-                       path: List[str],
-                       candidates: List[str]) -> List[Tuple[str, float]]:
+    def symbol_at_path(
+        self, tree_hv: torch.Tensor, path: list[str], candidates: list[str]
+    ) -> list[tuple[str, float]]:
         """Find the symbol at a given path.
 
         unbind(tree, path_HV) ≈ symbol_HV
@@ -338,8 +343,7 @@ class TreeEncoder:
         sims.sort(key=lambda x: x[1], reverse=True)
         return sims
 
-    def path_of_symbol(self, tree_hv: torch.Tensor,
-                       symbol_name: str) -> torch.Tensor:
+    def path_of_symbol(self, tree_hv: torch.Tensor, symbol_name: str) -> torch.Tensor:
         """Recover the approximate path HV for a symbol.
 
         unbind(tree, symbol_HV) ≈ path_HV
@@ -361,6 +365,7 @@ class TreeEncoder:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. FSAEncoder — Finite State Automata
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class FSAEncoder:
     """Encode finite state automata transition mappings.
@@ -387,23 +392,26 @@ class FSAEncoder:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.mode = mode
         self.device = device or "cpu"
         self.seed = seed or 42
 
-        self._states: Dict[str, torch.Tensor] = {}
-        self._inputs: Dict[str, torch.Tensor] = {}
+        self._states: dict[str, torch.Tensor] = {}
+        self._inputs: dict[str, torch.Tensor] = {}
         self._seed_counter = self.seed + 100
 
     def add_state(self, name: str) -> torch.Tensor:
         """Register a state HV."""
         if name not in self._states:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._states),
             ).squeeze(0)
             self._states[name] = hv
@@ -413,7 +421,10 @@ class FSAEncoder:
         """Register an input symbol HV."""
         if name not in self._inputs:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + 1000 + len(self._inputs),
             ).squeeze(0)
             self._inputs[name] = hv
@@ -421,7 +432,7 @@ class FSAEncoder:
 
     def encode(
         self,
-        transitions: List[Tuple[str, str, str]],
+        transitions: list[tuple[str, str, str]],
     ) -> torch.Tensor:
         """Encode FSA transitions.
 
@@ -450,10 +461,9 @@ class FSAEncoder:
 
         return hv_bundle(torch.stack(trans_hvs))
 
-    def next_state(self, fsa_hv: torch.Tensor,
-                   current_state: str,
-                   input_sym: str,
-                   candidates: List[str]) -> List[Tuple[str, float]]:
+    def next_state(
+        self, fsa_hv: torch.Tensor, current_state: str, input_sym: str, candidates: list[str]
+    ) -> list[tuple[str, float]]:
         """Query: given state and input, find the next state.
 
         unbind(unbind(fsa, input_HV), state_HV) ≈ permute(next_state_HV)
@@ -500,6 +510,7 @@ class FSAEncoder:
 # 4. NGramEncoder — Sequential N-Gram Statistics
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class NGramEncoder:
     """Encode n-gram statistics from a sequence of symbols.
 
@@ -525,8 +536,8 @@ class NGramEncoder:
         dim: int = 10_000,
         n: int = 3,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.n = n
@@ -534,20 +545,23 @@ class NGramEncoder:
         self.device = device or "cpu"
         self.seed = seed or 42
 
-        self._symbols: Dict[str, torch.Tensor] = {}
+        self._symbols: dict[str, torch.Tensor] = {}
         self._seed_counter = self.seed + 200
 
     def add_symbol(self, name: str) -> torch.Tensor:
         """Register a symbol HV."""
         if name not in self._symbols:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._symbols),
             ).squeeze(0)
             self._symbols[name] = hv
         return self._symbols[name]
 
-    def encode(self, sequence: List[str]) -> torch.Tensor:
+    def encode(self, sequence: list[str]) -> torch.Tensor:
         """Encode n-gram statistics for a sequence.
 
         Args:
@@ -562,14 +576,14 @@ class NGramEncoder:
         accumulator = torch.zeros(self.dim, device=self.device)
 
         for i in range(len(sequence) - self.n + 1):
-            ngram = sequence[i:i + self.n]
+            ngram = sequence[i : i + self.n]
             ngram_hv = self._encode_ngram(ngram)
             accumulator = accumulator + ngram_hv
 
         # Bundle to threshold
         return hv_bundle(accumulator.unsqueeze(0))
 
-    def _encode_ngram(self, symbols: List[str]) -> torch.Tensor:
+    def _encode_ngram(self, symbols: list[str]) -> torch.Tensor:
         """Encode a single n-gram via binding-based sequence.
 
         ngram_HV = bind(P^(n-1)(s1), P^(n-2)(s2), ..., sn)
@@ -584,8 +598,7 @@ class NGramEncoder:
 
         return result
 
-    def similarity_between(self, seq1: List[str],
-                           seq2: List[str]) -> float:
+    def similarity_between(self, seq1: list[str], seq2: list[str]) -> float:
         """Compute n-gram distribution similarity between two sequences.
 
         Args:
@@ -598,8 +611,7 @@ class NGramEncoder:
         hv2 = self.encode(seq2)
         return hv_hamming_sim(hv1, hv2).item()
 
-    def contains_ngram(self, stats_hv: torch.Tensor,
-                       ngram: List[str]) -> float:
+    def contains_ngram(self, stats_hv: torch.Tensor, ngram: list[str]) -> float:
         """Check if an n-gram is present in the statistics.
 
         Args:
@@ -616,6 +628,7 @@ class NGramEncoder:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 5. FrequencyEncoder — Weighted Frequency Distributions
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class FrequencyEncoder:
     """Encode frequency distributions over symbols.
@@ -639,28 +652,31 @@ class FrequencyEncoder:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.mode = mode
         self.device = device or "cpu"
         self.seed = seed or 42
 
-        self._symbols: Dict[str, torch.Tensor] = {}
+        self._symbols: dict[str, torch.Tensor] = {}
         self._seed_counter = self.seed + 300
 
     def add_symbol(self, name: str) -> torch.Tensor:
         """Register a symbol HV."""
         if name not in self._symbols:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._symbols),
             ).squeeze(0)
             self._symbols[name] = hv
         return self._symbols[name]
 
-    def encode(self, symbol_freqs: Dict[str, float]) -> torch.Tensor:
+    def encode(self, symbol_freqs: dict[str, float]) -> torch.Tensor:
         """Encode a frequency distribution.
 
         Args:
@@ -680,8 +696,7 @@ class FrequencyEncoder:
 
         return hv_bundle(torch.stack(scaled_hvs))
 
-    def rank_symbols(self, dist_hv: torch.Tensor,
-                     candidates: List[str]) -> List[Tuple[str, float]]:
+    def rank_symbols(self, dist_hv: torch.Tensor, candidates: list[str]) -> list[tuple[str, float]]:
         """Rank symbols by their similarity to the distribution.
 
         Args:
@@ -706,6 +721,7 @@ class FrequencyEncoder:
 # 6. StackEncoder — LIFO Stack via Permutation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class StackEncoder:
     """Encode a LIFO stack using permutation-based position encoding.
 
@@ -728,28 +744,31 @@ class StackEncoder:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.dim = dim
         self.mode = mode
         self.device = device or "cpu"
         self.seed = seed or 42
 
-        self._symbols: Dict[str, torch.Tensor] = {}
+        self._symbols: dict[str, torch.Tensor] = {}
         self._seed_counter = self.seed + 400
 
     def add_symbol(self, name: str) -> torch.Tensor:
         """Register a symbol HV."""
         if name not in self._symbols:
             hv = gen_hvs(
-                1, self.dim, self.mode, self.device,
+                1,
+                self.dim,
+                self.mode,
+                self.device,
                 self._seed_counter + len(self._symbols),
             ).squeeze(0)
             self._symbols[name] = hv
         return self._symbols[name]
 
-    def encode(self, items: List[str]) -> torch.Tensor:
+    def encode(self, items: list[str]) -> torch.Tensor:
         """Encode a stack of items.
 
         items[0] is top of stack.
@@ -773,8 +792,7 @@ class StackEncoder:
 
         return hv_bundle(torch.stack(hvs))
 
-    def push(self, stack_hv: torch.Tensor,
-             item: str) -> torch.Tensor:
+    def push(self, stack_hv: torch.Tensor, item: str) -> torch.Tensor:
         """Push an item onto the stack.
 
         stack' = bundle([item_hv, P(stack)])
@@ -790,8 +808,7 @@ class StackEncoder:
         shifted_stack = hv_permute(stack_hv)
         return hv_bundle(torch.stack([item_hv, shifted_stack]))
 
-    def peek(self, stack_hv: torch.Tensor,
-             candidates: List[str]) -> Tuple[str, float]:
+    def peek(self, stack_hv: torch.Tensor, candidates: list[str]) -> tuple[str, float]:
         """Identify the top item on the stack.
 
         The top item shares nearest-neighbor similarity with the stack HV.
@@ -816,7 +833,7 @@ class StackEncoder:
 
         return best_name, best_sim
 
-    def pop(self, stack_hv: torch.Tensor) -> Tuple[str, torch.Tensor]:
+    def pop(self, stack_hv: torch.Tensor) -> tuple[str, torch.Tensor]:
         """Pop the top item from the stack.
 
         Step 1: Identify top via nearest-neighbor

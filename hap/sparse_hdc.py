@@ -1,5 +1,4 @@
-"""
-Sparse Binary Hyperdimensional Computing
+"""Sparse Binary Hyperdimensional Computing
 ========================================
 Extends the HDC framework with sparse binary hypervectors (controlled density).
 Classification and Recall with Binary Hyperdimensional Computing:
@@ -23,31 +22,27 @@ Key operations:
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, Tuple
 
 import torch
 
 logger = logging.getLogger(__name__)
 
 from hap.hdc_core import (
-    hv_xor,
     hv_permute,
-    hv_popcount,
-    hv_hamming_sim,
-    hv_batch_sim,
+    hv_xor,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Sparse HV Generation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def gen_sparse_hvs(
     n: int,
     dim: int,
     density: float = 0.05,
-    device: Optional[str] = None,
-    seed: Optional[int] = None,
+    device: str | None = None,
+    seed: int | None = None,
 ) -> torch.Tensor:
     """Generate n sparse binary hypervectors with controlled density.
 
@@ -88,6 +83,7 @@ def gen_sparse_hvs(
 # Context-Dependent Thinning (CDT)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def cdt(
     hv: torch.Tensor,
     n_thinning: int = 2,
@@ -118,7 +114,7 @@ def cdt(
         raise ValueError(f"cdt expects 1D input, got shape {hv.shape}")
 
     dim = hv.shape[-1]
-    base_shift = int(round(shift_coef * dim))
+    base_shift = round(shift_coef * dim)
     result = torch.zeros(dim, dtype=hv.dtype, device=hv.device)
 
     superposition = hv.clone()
@@ -226,13 +222,14 @@ def sparse_bind(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 # Sparse Item Memory Generation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def gen_sparse_basis(
     n: int,
     dim: int,
     density: float = 0.05,
     proportional_spacing: bool = True,
-    seed: Optional[int] = None,
-    device: Optional[str] = None,
+    seed: int | None = None,
+    device: str | None = None,
 ) -> torch.Tensor:
     """Generate proportionally-spaced sparse basis vectors.
 
@@ -260,7 +257,7 @@ def gen_sparse_basis(
     s = seed or 42
 
     base = gen_sparse_hvs(n, dim, density, dev, s)
-    M = int(round(density * dim))
+    M = round(density * dim)
 
     if not proportional_spacing:
         return base
@@ -294,6 +291,7 @@ def gen_sparse_basis(
 # ═══════════════════════════════════════════════════════════════════════════════
 # Sparse Similarity
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def sparse_similarity(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """Jaccard-like similarity for sparse binary HVs.
@@ -339,8 +337,8 @@ def sparse_overlap(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 #  - OR-sum: 0.05 pJ/bit (only need to check if non-zero)
 #  - CDT shift + AND: 0.01 + 0.1 = 0.11 pJ/bit per iteration
 #  - Sparse XOR: still 0.1 pJ/bit (same as dense)
-ENERGY_CDT_OR_PJ = 0.05    # pJ per bit — disjunctive superposition
-ENERGY_CDT_AND_PJ = 0.08   # pJ per bit — AND for thinning
+ENERGY_CDT_OR_PJ = 0.05  # pJ per bit — disjunctive superposition
+ENERGY_CDT_AND_PJ = 0.08  # pJ per bit — AND for thinning
 ENERGY_CDT_SHIFT_PJ = 0.01  # pJ per bit — circular shift
 
 
@@ -350,7 +348,7 @@ def estimate_energy_sparse(
     n_or: int = 0,
     n_cdt: int = 0,
     n_xor: int = 0,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Estimate energy for sparse HDC operations.
 
     Args:

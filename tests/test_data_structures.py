@@ -2,13 +2,14 @@
 
 import pytest
 import torch
+
 from hap.data_structures import (
-    GraphEncoder,
-    TreeEncoder,
-    FSAEncoder,
-    NGramEncoder,
     FrequencyEncoder,
+    FSAEncoder,
+    GraphEncoder,
+    NGramEncoder,
     StackEncoder,
+    TreeEncoder,
 )
 
 
@@ -136,7 +137,9 @@ class TestFSAEncoder:
 
         # From Lock + Token → Unlock should rank top among multiple candidates
         results = fsa.next_state(
-            fsa_hv, "Lock", "Token",
+            fsa_hv,
+            "Lock",
+            "Token",
             ["Unlock", "Foo", "Bar"],
         )
         assert len(results) >= 2

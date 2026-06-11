@@ -6,20 +6,29 @@ consensus sum, Hamming distance, orthogonality properties, and
 production-grade edge cases.
 """
 
-import torch
 import pytest
+import torch
 
 from hap.hdc_core import (
-    gen_hvs, hv_xor, hv_popcount, hv_hamming_sim,
-    hv_bundle, hv_bind, hv_permute, hv_consensus_sum,
-    hv_majority, hv_batch_sim, estimate_energy_hdv,
-    ENERGY_XOR_PJ, ENERGY_POPCOUNT_PJ,
+    ENERGY_POPCOUNT_PJ,
+    ENERGY_XOR_PJ,
+    estimate_energy_hdv,
+    gen_hvs,
+    hv_batch_sim,
+    hv_bind,
+    hv_bundle,
+    hv_consensus_sum,
+    hv_hamming_sim,
+    hv_majority,
+    hv_permute,
+    hv_popcount,
+    hv_xor,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HV Generation
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestGenHVS:
     def test_shape_and_range_binary(self):
@@ -64,6 +73,7 @@ class TestGenHVS:
 # ═══════════════════════════════════════════════════════════════════════════════
 # XOR
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestXOR:
     """Paper Section II.A: XOR is involution, associative, commutative."""
@@ -113,6 +123,7 @@ class TestXOR:
 # Hamming Distance
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestHammingDistance:
     """Paper: 'the probability of it being associated' = 1 - H_n."""
 
@@ -155,6 +166,7 @@ class TestHammingDistance:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Permute
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestPermute:
     """Paper Section II.A: P is a permutation of index locations."""
@@ -202,6 +214,7 @@ class TestPermute:
 # Bundle / Majority / Consensus Sum
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestBundle:
     """Paper: consensus sum = component-wise majority vote."""
 
@@ -225,18 +238,18 @@ class TestBundle:
     def test_majority_binary(self):
         hv = torch.tensor([0.6, 0.3, 0.8, 0.2])
         m = hv_majority(hv, mode="binary")
-        assert torch.equal(m, torch.tensor([1., 0., 1., 0.]))
+        assert torch.equal(m, torch.tensor([1.0, 0.0, 1.0, 0.0]))
 
     def test_majority_binary_ties(self):
         """Exactly 0.5 should be NOT > 0.5, so result is 0."""
         hv = torch.tensor([0.5, 0.5, 0.5])
         m = hv_majority(hv, mode="binary")
-        assert torch.equal(m, torch.tensor([0., 0., 0.]))
+        assert torch.equal(m, torch.tensor([0.0, 0.0, 0.0]))
 
     def test_majority_bipolar_positive(self):
         hv = torch.tensor([0.5, -0.5, 0.0])
         m = hv_majority(hv, mode="bipolar")
-        assert torch.equal(m, torch.tensor([1., -1., 1.]))  # 0.0 >= 0 → 1
+        assert torch.equal(m, torch.tensor([1.0, -1.0, 1.0]))  # 0.0 >= 0 → 1
 
     def test_majority_bipolar_negative(self):
         hv = torch.tensor([-0.1])
@@ -244,7 +257,7 @@ class TestBundle:
         assert m[0] == -1.0
 
     def test_consensus_sum_majority(self):
-        hvs = torch.tensor([[1., 0., 0.], [1., 1., 0.], [0., 1., 0.]])
+        hvs = torch.tensor([[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
         cs = hv_consensus_sum(hvs)
         assert cs[0] == 1.0
         assert cs[1] == 1.0
@@ -261,6 +274,7 @@ class TestBundle:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Batch Similarity
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestBatchSim:
     def test_batch_similarity(self):
@@ -293,6 +307,7 @@ class TestBatchSim:
 # Bind
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestBind:
     def test_bind_unbind_roundtrip_binary(self):
         a = gen_hvs(1, 500, seed=10).squeeze(0)
@@ -319,6 +334,7 @@ class TestBind:
 # Energy Model
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestEnergy:
     def test_energy_returns_dict(self):
         energy = estimate_energy_hdv(dim=1000, n_xor=10)
@@ -342,6 +358,7 @@ class TestEnergy:
 # Popcount
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestPopcount:
     def test_all_ones(self):
         hv = torch.ones(100)
@@ -354,16 +371,18 @@ class TestPopcount:
     def test_batch(self):
         hvs = torch.ones(3, 100)
         counts = hv_popcount(hvs)
-        assert torch.equal(counts, torch.tensor([100., 100., 100.]))
+        assert torch.equal(counts, torch.tensor([100.0, 100.0, 100.0]))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HDCConfig
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestHDCConfig:
     def test_defaults(self):
         from hap.hdc_core import HDCConfig
+
         cfg = HDCConfig()
         assert cfg.dim == 10_000
         assert cfg.mode == "binary"
@@ -371,6 +390,7 @@ class TestHDCConfig:
 
     def test_custom(self):
         from hap.hdc_core import HDCConfig
+
         cfg = HDCConfig(dim=5000, mode="bipolar", device="cuda", seed=123)
         assert cfg.dim == 5000
         assert cfg.mode == "bipolar"

@@ -1,5 +1,4 @@
-"""
-HDC Core — Pure Binary Hyperdimensional Computing Primitives
+"""HDC Core — Pure Binary Hyperdimensional Computing Primitives
 =============================================================
 "Push the job onto encoding. Purely hardware. Then push encoding
  as far away from actual learning that you can learn very rapidly."
@@ -28,13 +27,9 @@ Hardware properties (45nm CMOS, Horowitz ISSCC 2014):
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-
-from hap.exceptions import HAPDimensionError, HAPModeError
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +37,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class HDCConfig:
@@ -53,22 +49,24 @@ class HDCConfig:
         device: torch device ('cpu', 'cuda')
         seed: Random seed for reproducibility
     """
+
     dim: int = 10_000
     mode: str = "binary"
     device: str = "cpu"
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HV Generation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def gen_hvs(
     n: int,
     dim: int,
     mode: str = "binary",
-    device: Optional[str] = None,
-    seed: Optional[int] = None,
+    device: str | None = None,
+    seed: int | None = None,
 ) -> torch.Tensor:
     """Generate n random hypervectors of dimension dim.
 
@@ -102,6 +100,7 @@ def gen_hvs(
 # ═══════════════════════════════════════════════════════════════════════════════
 # Core Operations — Every Algorithm in This Codebase Reduces to These
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def hv_xor(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """Bitwise XOR — the ONLY binding operation needed.
@@ -253,18 +252,17 @@ def hv_consensus_sum(hvs: torch.Tensor) -> torch.Tensor:
     Returns:
         (D,) consensus sum HV
     """
-    n, dim = hvs.shape
+    n, _dim = hvs.shape
     ones = hvs.sum(dim=0)  # Count of 1s per component
-    zeros = n - ones        # Count of 0s per component
+    zeros = n - ones  # Count of 0s per component
 
     # Majority vote with tie-breaking
     result = (ones > zeros).float()
 
     # Random tie-breaking for components where ones == zeros
-    tie_mask = (ones == zeros)
+    tie_mask = ones == zeros
     if tie_mask.any():
-        result[tie_mask] = torch.randint(0, 2, (tie_mask.sum().item(),),
-                                          device=hvs.device).float()
+        result[tie_mask] = torch.randint(0, 2, (tie_mask.sum().item(),), device=hvs.device).float()
 
     return result
 
@@ -314,6 +312,7 @@ def hv_batch_sim(query: torch.Tensor, memory: torch.Tensor) -> torch.Tensor:
 # Convenience: Legacy-compatible aliases
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def sim(a: torch.Tensor, b: torch.Tensor, mode: str = "binary") -> torch.Tensor:
     """Legacy compatibility wrapper for hv_hamming_sim."""
     return hv_hamming_sim(a, b)
@@ -338,7 +337,7 @@ def thresh(hv: torch.Tensor) -> torch.Tensor:
 # Hardware Energy Model (Horowitz ISSCC 2014, 45nm CMOS)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ENERGY_XOR_PJ = 0.1       # pJ per bit — XOR binding
+ENERGY_XOR_PJ = 0.1  # pJ per bit — XOR binding
 ENERGY_POPCOUNT_PJ = 0.2  # pJ per operation — Hamming distance
 ENERGY_BIT_ADD_PJ = 0.05  # pJ per bit — bundling (integer accumulate)
 ENERGY_PERMUTE_PJ = 0.01  # pJ per bit — cyclic shift / routing
@@ -346,11 +345,9 @@ ENERGY_PERMUTE_PJ = 0.01  # pJ per bit — cyclic shift / routing
 ENERGY_INT8_MAC_PJ = 4.6  # pJ per multiply-accumulate (comparison)
 
 
-def estimate_energy_hdv(dim: int,
-                         n_xor: int = 0,
-                         n_popcount: int = 0,
-                         n_bundles: int = 0,
-                         n_permutes: int = 0) -> Dict[str, float]:
+def estimate_energy_hdv(
+    dim: int, n_xor: int = 0, n_popcount: int = 0, n_bundles: int = 0, n_permutes: int = 0
+) -> dict[str, float]:
     """Estimate energy for a sequence of HDC operations.
 
     Args:

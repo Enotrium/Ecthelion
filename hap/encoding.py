@@ -1,5 +1,4 @@
-"""
-HDC Encoding — Push the Job Onto the Encoder
+"""HDC Encoding — Push the Job Onto the Encoder
 =============================================
 "Push the job onto encoding. Purely hardware. Then push encoding
  as far away from actual learning that you can learn very rapidly."
@@ -27,25 +26,18 @@ Production improvements over research code:
 from __future__ import annotations
 
 import logging
-import math
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-import torch.nn as nn
-
-from hap.exceptions import HAPDimensionError, HAPEncodingError, HAPConfigError
+from torch import nn
 
 from hap.hdc_core import (
     gen_hvs,
-    hv_xor,
+    hv_batch_sim,
     hv_bind,
     hv_bundle,
-    hv_permute,
     hv_majority,
-    hv_hamming_sim,
-    hv_popcount,
-    hv_batch_sim,
-    HDCConfig,
+    hv_permute,
+    hv_xor,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,9 +47,9 @@ logger = logging.getLogger(__name__)
 # 1. PositionalIntensityEncoder — 2D Pixel Encoding (Vectorized)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class PositionalIntensityEncoder(nn.Module):
-    """
-    Encode a 2D spatial array (image, time slice, heatmap) into a single HV.
+    """Encode a 2D spatial array (image, time slice, heatmap) into a single HV.
 
     From the paper (Section "Encoding images as HBVs"):
         "For each location, we permute the intensity representations
@@ -91,8 +83,8 @@ class PositionalIntensityEncoder(nn.Module):
         dim: int = 10_000,
         n_intensity_levels: int = 256,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         super().__init__()
         self.height = height
@@ -119,8 +111,11 @@ class PositionalIntensityEncoder(nn.Module):
         of intensities" where distances increase away from the diagonal.
         """
         base = gen_hvs(
-            self.n_intensity_levels, self.dim,
-            mode="binary", device=self.device, seed=seed,
+            self.n_intensity_levels,
+            self.dim,
+            mode="binary",
+            device=self.device,
+            seed=seed,
         )
         levels = [base[0]]
         for i in range(1, self.n_intensity_levels):
@@ -144,23 +139,19 @@ class PositionalIntensityEncoder(nn.Module):
             image = image.squeeze(0)
         H, W = image.shape
 
-        if H > self.height or W > self.width:
+        if self.height < H or self.width < W:
             raise ValueError(
-                f"Image size ({H}x{W}) exceeds encoder capacity "
-                f"({self.height}x{self.width})"
+                f"Image size ({H}x{W}) exceeds encoder capacity ({self.height}x{self.width})"
             )
 
         # Normalize to [0, 1] robustly
         mn, mx = image.min(), image.max()
-        if mx - mn > 1e-8:
-            image = (image - mn) / (mx - mn + 1e-12)
-        else:
-            image = torch.zeros_like(image)
+        image = (image - mn) / (mx - mn + 1e-12) if mx - mn > 1e-08 else torch.zeros_like(image)
 
         # Quantize to intensity levels: (H, W) → (H*W,)
         flat = image.flatten()
-        i_indices = (flat * (self.n_intensity_levels - 1)).long().clamp(
-            0, self.n_intensity_levels - 1
+        i_indices = (
+            (flat * (self.n_intensity_levels - 1)).long().clamp(0, self.n_intensity_levels - 1)
         )
 
         # Look up intensity HVs: (H*W, D)
@@ -200,9 +191,9 @@ class PositionalIntensityEncoder(nn.Module):
 # 2. TimeSliceEncoder — DVS Time Image → HV
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TimeSliceEncoder(nn.Module):
-    """
-    Encode DVS time image into HV (paper Section "Using neuromorphic visual information").
+    """Encode DVS time image into HV (paper Section "Using neuromorphic visual information").
 
     A "time image" extracts motion information from DVS event timestamps:
         "In a given time slice of (x,y,t) space, the events are projected
@@ -227,8 +218,8 @@ class TimeSliceEncoder(nn.Module):
         dim: int = 8_000,
         intensity_levels: int = 255,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         super().__init__()
         self.height = height
@@ -262,9 +253,7 @@ class TimeSliceEncoder(nn.Module):
             normalized = time_image.clone()
             mn, mx = non_zero.min(), non_zero.max()
             if mx - mn > 1e-8:
-                normalized[time_image > 0] = (
-                    (time_image[time_image > 0] - mn) / (mx - mn + 1e-12)
-                )
+                normalized[time_image > 0] = (time_image[time_image > 0] - mn) / (mx - mn + 1e-12)
         else:
             normalized = torch.zeros_like(time_image)
 
@@ -290,7 +279,7 @@ class TimeSliceEncoder(nn.Module):
         T = time_images.shape[0]
         result = []
         for t in range(0, T, window_size):
-            batch = time_images[t:min(t + window_size, T)]
+            batch = time_images[t : min(t + window_size, T)]
             if batch.shape[0] == 1:
                 hv = self.encode_time_slice(batch[0])
             else:
@@ -304,9 +293,9 @@ class TimeSliceEncoder(nn.Module):
 # 3. VelocityEncoder — Continuous Value → HV
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class VelocityEncoder(nn.Module):
-    """
-    Encode continuous velocity values as basis-vector HVs.
+    """Encode continuous velocity values as basis-vector HVs.
 
     From the paper (Section "Perception to action binding with HBVs"):
         "We construct HBV representations of each component individually,
@@ -335,8 +324,8 @@ class VelocityEncoder(nn.Module):
         step: float = 0.001,
         dim: int = 8_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         super().__init__()
         self.min_val = min_val
@@ -370,7 +359,7 @@ class VelocityEncoder(nn.Module):
         self.register_buffer("basis", torch.stack(levels))
         self.n_basis = n_basis
 
-    def encode(self, velocity: Union[float, torch.Tensor]) -> torch.Tensor:
+    def encode(self, velocity: float | torch.Tensor) -> torch.Tensor:
         """Encode a velocity value to its nearest basis HV.
 
         Args:
@@ -380,7 +369,7 @@ class VelocityEncoder(nn.Module):
             (dim,) basis hypervector
         """
         v = velocity.item() if isinstance(velocity, torch.Tensor) else velocity
-        idx = int(round((v - self.min_val) / self.step))
+        idx = round((v - self.min_val) / self.step)
         idx = max(0, min(idx, self.n_basis - 1))
         return self.basis[idx].clone()
 
@@ -389,7 +378,7 @@ class VelocityEncoder(nn.Module):
         vx: float,
         vy: float,
         vz: float,
-        keys: Optional[torch.Tensor] = None,
+        keys: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Encode 3D velocity vector.
 
@@ -419,9 +408,9 @@ class VelocityEncoder(nn.Module):
 # 4. SequenceEncoder — Temporal Sequence → HV
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class SequenceEncoder:
-    """
-    Encode a temporal sequence of HVs into a single sequence HV.
+    """Encode a temporal sequence of HVs into a single sequence HV.
 
     From the paper (Section "Properties of HBVs", item 3):
         "A sequence C_1, C_2, ..., C_n is equivalent to
@@ -471,8 +460,7 @@ class SequenceEncoder:
 
         return result
 
-    def shift_forward(self, seq_hv: torch.Tensor,
-                      new_hv: torch.Tensor) -> torch.Tensor:
+    def shift_forward(self, seq_hv: torch.Tensor, new_hv: torch.Tensor) -> torch.Tensor:
         """Add new element to front of sequence.
 
         seq' = XOR(P(seq), new)
@@ -487,9 +475,9 @@ class SequenceEncoder:
         shifted = hv_permute(seq_hv, self.permute_k)
         return hv_xor(shifted, new_hv)
 
-    def shift_backward(self, seq_hv: torch.Tensor,
-                        old_hv: torch.Tensor,
-                        T: int) -> torch.Tensor:
+    def shift_backward(
+        self, seq_hv: torch.Tensor, old_hv: torch.Tensor, n_symbols: int
+    ) -> torch.Tensor:
         """Remove oldest element from sequence.
 
         seq' = XOR(seq, P^(T-1)(old))
@@ -503,12 +491,12 @@ class SequenceEncoder:
         Args:
             seq_hv: Current sequence HV
             old_hv: Oldest element to remove
-            T: Current sequence length
+            n_symbols: Current sequence length
 
         Returns:
             Updated sequence HV (equivalent to encoding seq[1:])
         """
-        shifted_old = hv_permute(old_hv, (T - 1) * self.permute_k)
+        shifted_old = hv_permute(old_hv, (n_symbols - 1) * self.permute_k)
         return hv_xor(seq_hv, shifted_old)
 
 
@@ -516,9 +504,9 @@ class SequenceEncoder:
 # 5. DVSEncoder — Raw Event Stream → HV
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class DVSEncoder:
-    """
-    Encode raw DVS event stream (x, y, t, polarity) into HVs.
+    """Encode raw DVS event stream (x, y, t, polarity) into HVs.
 
     From the paper (Section "Using neuromorphic visual information"):
         "The DVS is an asynchronous differential sensor: Each pixel acts
@@ -546,7 +534,7 @@ class DVSEncoder:
         height: int = 260,
         dim: int = 8_000,
         time_window: float = 0.033,  # ~30 fps equivalent
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
         self.width = width
         self.height = height
@@ -607,7 +595,7 @@ class DVSEncoder:
         """
         if 0 <= x < self.width and 0 <= y < self.height:
             self._accumulator[y, x, 0] += 1  # event count
-            self._accumulator[y, x, 1] = t    # keep most recent timestamp
+            self._accumulator[y, x, 1] = t  # keep most recent timestamp
 
     def get_time_image(self) -> torch.Tensor:
         """Build a time image from accumulated events.
@@ -650,9 +638,9 @@ class DVSEncoder:
 # 6. DataRecordEncoder — Multi-Field Records
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class DataRecordEncoder:
-    """
-    Encode multi-field data records as HVs using role-filler binding.
+    """Encode multi-field data records as HVs using role-filler binding.
 
     From the paper (Section "Properties of HBVs", item 4):
         "A data record could consist of name, age, and sex. Each is given
@@ -676,11 +664,11 @@ class DataRecordEncoder:
 
     def __init__(
         self,
-        field_names: List[str],
+        field_names: list[str],
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.field_names = field_names
         self.dim = dim
@@ -709,24 +697,20 @@ class DataRecordEncoder:
         for name, value in fields.items():
             if name not in self._field_keys:
                 raise KeyError(
-                    f"Unknown field: '{name}'. Known fields: "
-                    f"{list(self._field_keys.keys())}"
+                    f"Unknown field: '{name}'. Known fields: {list(self._field_keys.keys())}"
                 )
 
             key = self._field_keys[name]
-            if value.dim() == 0:
-                val_hv = value.repeat(self.dim)
-            else:
-                val_hv = value
+            val_hv = value.repeat(self.dim) if value.dim() == 0 else value
 
             bound = hv_bind(key, val_hv.to(key.device), self.mode)
             bound_hvs.append(bound)
 
         return hv_bundle(torch.stack(bound_hvs))
 
-    def query_field(self, record: torch.Tensor,
-                    field_name: str,
-                    candidates: torch.Tensor) -> Tuple[int, float]:
+    def query_field(
+        self, record: torch.Tensor, field_name: str, candidates: torch.Tensor
+    ) -> tuple[int, float]:
         """Retrieve the nearest field value from a record.
 
         record_OR_field = XOR(record, field_key) ≈ field_value

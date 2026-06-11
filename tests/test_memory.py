@@ -5,22 +5,22 @@ Verifies: AssociativeMemory, ActionPerceptionMemory,
 DataRecordMemory, HDCClassifier, and RefineHDLearner.
 """
 
-import torch
 import pytest
+import torch
 
-from hap.hdc_core import gen_hvs, hv_hamming_sim
+from hap.hdc_core import gen_hvs
 from hap.memory import (
-    AssociativeMemory,
     ActionPerceptionMemory,
+    AssociativeMemory,
     DataRecordMemory,
     HDCClassifier,
     RefineHDLearner,
 )
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # AssociativeMemory
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestAssociativeMemory:
     @pytest.fixture
@@ -61,12 +61,14 @@ class TestAssociativeMemory:
         memory.train(p, a)
 
         # Create candidates including the true action
-        candidates = torch.stack([
-            gen_hvs(1, 500, seed=99).squeeze(0),
-            gen_hvs(1, 500, seed=98).squeeze(0),
-            a,
-            gen_hvs(1, 500, seed=97).squeeze(0),
-        ])
+        candidates = torch.stack(
+            [
+                gen_hvs(1, 500, seed=99).squeeze(0),
+                gen_hvs(1, 500, seed=98).squeeze(0),
+                a,
+                gen_hvs(1, 500, seed=97).squeeze(0),
+            ]
+        )
 
         best_idx, sims = memory.infer(p, candidates)
         # The actual action should have highest similarity
@@ -112,6 +114,7 @@ class TestAssociativeMemory:
 # ═══════════════════════════════════════════════════════════════════════════════
 # ActionPerceptionMemory
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestActionPerceptionMemory:
     @pytest.fixture
@@ -188,6 +191,7 @@ class TestActionPerceptionMemory:
 # DataRecordMemory (Sliding Window)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestDataRecordMemory:
     @pytest.fixture
     def drm(self):
@@ -235,6 +239,7 @@ class TestDataRecordMemory:
 # ═══════════════════════════════════════════════════════════════════════════════
 # HDCClassifier
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestHDCClassifier:
     @pytest.fixture
@@ -314,6 +319,7 @@ class TestHDCClassifier:
 # RefineHDLearner
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestRefineHDLearner:
     @pytest.fixture
     def data(self):
@@ -340,8 +346,9 @@ class TestRefineHDLearner:
         assert "initial_accuracy" in result
         assert "final_accuracy" in result
         assert len(result["history"]) == 4  # round 0 + 3 refinement rounds
-        assert result["final_accuracy"] >= result["initial_accuracy"], \
+        assert result["final_accuracy"] >= result["initial_accuracy"], (
             "Refinement should not decrease accuracy"
+        )
 
     def test_history_structure(self, data):
         percepts, labels = data
@@ -366,6 +373,7 @@ class TestRefineHDLearner:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Integration / End-to-End
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestIntegration:
     """End-to-end tests combining encoding, memory, and inference."""
@@ -398,9 +406,14 @@ class TestIntegration:
         from hap.hap import EgoMotionEstimator
 
         est = EgoMotionEstimator(
-            width=8, height=6, dim=300,
-            n_angular_bins=10, n_linear_x_bins=5, n_linear_z_bins=5,
-            velocity_step=0.1, seed=42,
+            width=8,
+            height=6,
+            dim=300,
+            n_angular_bins=10,
+            n_linear_x_bins=5,
+            n_linear_z_bins=5,
+            velocity_step=0.1,
+            seed=42,
         )
 
         # Train on a few samples
@@ -421,17 +434,23 @@ class TestIntegration:
 
     def test_HAP_full_pipeline(self):
         """Test the full HyperdimensionalActivePerception pipeline."""
-        from hap.hap import HyperdimensionalActivePerception
         from hap.encoding import VelocityEncoder
+        from hap.hap import HyperdimensionalActivePerception
         from hap.memory import AssociativeMemory
 
         encoder = VelocityEncoder(
-            min_val=0.0, max_val=1.0, step=0.1, dim=300, seed=42,
+            min_val=0.0,
+            max_val=1.0,
+            step=0.1,
+            dim=300,
+            seed=42,
         )
         memory = AssociativeMemory(dim=300, mode="binary")
 
         hap = HyperdimensionalActivePerception(
-            dim=300, encoder=encoder, memory=memory,
+            dim=300,
+            encoder=encoder,
+            memory=memory,
         )
 
         # Observe, memorize, decide
@@ -460,9 +479,14 @@ class TestIntegration:
         from hap.hap import EgoMotionEstimator
 
         e1 = EgoMotionEstimator(
-            width=8, height=6, dim=200,
-            n_angular_bins=5, n_linear_x_bins=3, n_linear_z_bins=3,
-            velocity_step=0.1, seed=42,
+            width=8,
+            height=6,
+            dim=200,
+            n_angular_bins=5,
+            n_linear_x_bins=3,
+            n_linear_z_bins=3,
+            velocity_step=0.1,
+            seed=42,
         )
 
         torch.manual_seed(123)
@@ -471,9 +495,14 @@ class TestIntegration:
             e1.train(img, (i % 5) * 0.1, (i % 3) * 0.1, (i % 3) * 0.1)
 
         e2 = EgoMotionEstimator(
-            width=8, height=6, dim=200,
-            n_angular_bins=5, n_linear_x_bins=3, n_linear_z_bins=3,
-            velocity_step=0.1, seed=42,
+            width=8,
+            height=6,
+            dim=200,
+            n_angular_bins=5,
+            n_linear_x_bins=3,
+            n_linear_z_bins=3,
+            velocity_step=0.1,
+            seed=42,
         )
 
         torch.manual_seed(123)
@@ -491,9 +520,14 @@ class TestIntegration:
         from hap.hap import EgoMotionEstimator
 
         est = EgoMotionEstimator(
-            width=8, height=6, dim=200,
-            n_angular_bins=5, n_linear_x_bins=3, n_linear_z_bins=3,
-            velocity_step=0.1, seed=42,
+            width=8,
+            height=6,
+            dim=200,
+            n_angular_bins=5,
+            n_linear_x_bins=3,
+            n_linear_z_bins=3,
+            velocity_step=0.1,
+            seed=42,
         )
 
         est.train(torch.rand(6, 8), 0.1, 0.0, 0.0)
@@ -502,9 +536,14 @@ class TestIntegration:
         est.save(path)
 
         est2 = EgoMotionEstimator(
-            width=8, height=6, dim=200,
-            n_angular_bins=5, n_linear_x_bins=3, n_linear_z_bins=3,
-            velocity_step=0.1, seed=42,
+            width=8,
+            height=6,
+            dim=200,
+            n_angular_bins=5,
+            n_linear_x_bins=3,
+            n_linear_z_bins=3,
+            velocity_step=0.1,
+            seed=42,
         )
         est2.load(path)
         assert est2._total_train_samples == 1

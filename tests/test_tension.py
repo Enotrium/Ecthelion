@@ -1,14 +1,15 @@
 """Tests for hap.tension — Tension Minimization (paper Section: Distributional Semantics)."""
 
 import torch
+
+from hap.hdc_core import gen_hvs, hv_hamming_sim
 from hap.tension import (
-    tension_energy,
-    minimize_tension,
     build_cooc_graph,
     build_masses,
     learn_distributional_hvs,
+    minimize_tension,
+    tension_energy,
 )
-from hap.hdc_core import gen_hvs, hv_hamming_sim
 
 
 class TestTensionEnergy:
@@ -21,11 +22,13 @@ class TestTensionEnergy:
 
     def test_positive_for_connected(self):
         hv = gen_hvs(3, 100, seed=42)
-        graph = torch.tensor([
-            [0., 1., 1.],
-            [1., 0., 0.],
-            [1., 0., 0.],
-        ])
+        graph = torch.tensor(
+            [
+                [0.0, 1.0, 1.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+            ]
+        )
         masses = torch.tensor([1.0, 1.0, 1.0])
         energy = tension_energy(hv, graph, masses)
         # Random vectors with co-occurrence force should have tension
@@ -36,7 +39,7 @@ class TestTensionEnergy:
         hv = gen_hvs(2, dim, seed=42)
         # Make them nearly identical
         hv[1] = hv[0].clone()
-        graph = torch.tensor([[0., 1.], [1., 0.]])
+        graph = torch.tensor([[0.0, 1.0], [1.0, 0.0]])
         masses = torch.tensor([1.0, 1.0])
         energy_identical = tension_energy(hv, graph, masses)
 
@@ -50,17 +53,24 @@ class TestTensionEnergy:
 class TestMinimizeTension:
     def test_energy_decreases(self):
         hv = gen_hvs(4, 100, seed=42)
-        graph = torch.tensor([
-            [0., 1., 0., 0.],
-            [1., 0., 1., 0.],
-            [0., 1., 0., 1.],
-            [0., 0., 1., 0.],
-        ])
+        graph = torch.tensor(
+            [
+                [0.0, 1.0, 0.0, 0.0],
+                [1.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 0.0],
+            ]
+        )
         masses = torch.tensor([1.0, 1.0, 1.0, 1.0])
 
         initial = tension_energy(hv, graph, masses)
         optimized, history = minimize_tension(
-            hv, graph, masses, n_iters=500, initial_temp=5.0, seed=42,
+            hv,
+            graph,
+            masses,
+            n_iters=500,
+            initial_temp=5.0,
+            seed=42,
         )
         final = tension_energy(optimized, graph, masses)
 
@@ -71,16 +81,24 @@ class TestMinimizeTension:
         # With only connective force (proximal disabled), energy should
         # approach 0 for a simple chain.
         hv = gen_hvs(3, 50, seed=42)
-        graph = torch.tensor([
-            [0., 1., 0.],
-            [1., 0., 1.],
-            [0., 1., 0.],
-        ])
+        graph = torch.tensor(
+            [
+                [0.0, 1.0, 0.0],
+                [1.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0],
+            ]
+        )
         masses = torch.tensor([1.0, 1.0, 1.0])
 
         optimized, history = minimize_tension(
-            hv, graph, masses, n_iters=2000, initial_temp=10.0,
-            cooling_rate=0.99, disable_proximal=True, seed=42,
+            hv,
+            graph,
+            masses,
+            n_iters=2000,
+            initial_temp=10.0,
+            cooling_rate=0.99,
+            disable_proximal=True,
+            seed=42,
         )
         final_energy = history[-1]
         # Should be very low (approaching 0)
@@ -93,7 +111,11 @@ class TestMinimizeTension:
         masses = torch.tensor([1.0, 1.0, 1.0])
 
         _, history = minimize_tension(
-            hv, graph, masses, n_iters=100, seed=42,
+            hv,
+            graph,
+            masses,
+            n_iters=100,
+            seed=42,
         )
         assert len(history) >= 1
         assert all(isinstance(e, float) for e in history)
@@ -132,7 +154,11 @@ class TestLearnDistributionalHVs:
         cooc = {(0, 1): 10.0, (2, 3): 10.0}
         counts = torch.tensor([10, 10, 5, 5])
         hvs = learn_distributional_hvs(
-            cooc, counts, dim=500, n_iters=1000, seed=42,
+            cooc,
+            counts,
+            dim=500,
+            n_iters=1000,
+            seed=42,
         )
         assert hvs.shape == (4, 500)
 

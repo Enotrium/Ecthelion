@@ -1,5 +1,4 @@
-"""
-Hyperdimensional Active Perception (HAP) Framework
+"""Hyperdimensional Active Perception (HAP) Framework
 ===================================================
 Production-grade implementation of:
 Learning Sensorimotor Control with Neuromorphic Sensors:
@@ -55,95 +54,126 @@ Benchmark performance (from paper):
     - CNN-comparable accuracy at <1% the computational cost
 """
 
-from hap.hdc_core import (
-    gen_hvs,
-    hv_xor,
-    hv_popcount,
-    hv_hamming_sim,
-    hv_bundle,
-    hv_bind,
-    hv_permute,
-    hv_consensus_sum,
-    hv_majority,
-    hv_batch_sim,
-    HDCConfig,
+from hap.capacity import (
+    binomial_prob,
+    capacity_curve,
+    compute_hamming_statistics,
+    find_capacity_limit,
+)
+from hap.data_structures import (
+    FrequencyEncoder,
+    FSAEncoder,
+    GraphEncoder,
+    NGramEncoder,
+    StackEncoder,
+    TreeEncoder,
 )
 from hap.encoding import (
-    TimeSliceEncoder,
-    VelocityEncoder,
-    SequenceEncoder,
+    DataRecordEncoder,
     DVSEncoder,
     PositionalIntensityEncoder,
-    DataRecordEncoder,
+    SequenceEncoder,
+    TimeSliceEncoder,
+    VelocityEncoder,
+)
+from hap.hap import (
+    EgoMotionEstimator,
+    HyperdimensionalActivePerception,
+)
+from hap.hdc_core import (
+    HDCConfig,
+    gen_hvs,
+    hv_batch_sim,
+    hv_bind,
+    hv_bundle,
+    hv_consensus_sum,
+    hv_hamming_sim,
+    hv_majority,
+    hv_permute,
+    hv_popcount,
+    hv_xor,
 )
 from hap.memory import (
-    AssociativeMemory,
     ActionPerceptionMemory,
+    AssociativeMemory,
     DataRecordMemory,
     HDCClassifier,
     RefineHDLearner,
 )
-from hap.hap import (
-    HyperdimensionalActivePerception,
-    EgoMotionEstimator,
-)
 from hap.sparse_hdc import (
-    gen_sparse_hvs,
     cdt,
+    estimate_energy_sparse,
+    gen_sparse_basis,
+    gen_sparse_hvs,
+    sparse_bind,
     sparse_bundle,
     sparse_majority,
-    sparse_bind,
-    gen_sparse_basis,
-    sparse_similarity,
     sparse_overlap,
-    estimate_energy_sparse,
-)
-from hap.data_structures import (
-    GraphEncoder,
-    TreeEncoder,
-    FSAEncoder,
-    NGramEncoder,
-    FrequencyEncoder,
-    StackEncoder,
+    sparse_similarity,
 )
 from hap.tension import (
-    tension_energy,
-    minimize_tension,
     build_cooc_graph,
     build_masses,
     learn_distributional_hvs,
-)
-from hap.capacity import (
-    binomial_prob,
-    compute_hamming_statistics,
-    capacity_curve,
-    find_capacity_limit,
+    minimize_tension,
+    tension_energy,
 )
 
 __all__ = [
-    # Core
-    "gen_hvs", "hv_xor", "hv_popcount", "hv_hamming_sim",
-    "hv_bundle", "hv_bind", "hv_permute", "hv_consensus_sum",
-    "hv_majority", "hv_batch_sim", "HDCConfig",
-    # Encoding
-    "TimeSliceEncoder", "VelocityEncoder", "SequenceEncoder",
-    "DVSEncoder", "PositionalIntensityEncoder", "DataRecordEncoder",
+    "ActionPerceptionMemory",
     # Memory
-    "AssociativeMemory", "ActionPerceptionMemory", "DataRecordMemory",
-    "HDCClassifier", "RefineHDLearner",
-    # HAP
-    "HyperdimensionalActivePerception", "EgoMotionEstimator",
-    # Sparse HDC
-    "gen_sparse_hvs", "cdt", "sparse_bundle", "sparse_majority",
-    "sparse_bind", "gen_sparse_basis", "sparse_similarity",
-    "sparse_overlap", "estimate_energy_sparse",
+    "AssociativeMemory",
+    "DVSEncoder",
+    "DataRecordEncoder",
+    "DataRecordMemory",
+    "EgoMotionEstimator",
+    "FSAEncoder",
+    "FrequencyEncoder",
     # Data Structures
-    "GraphEncoder", "TreeEncoder", "FSAEncoder",
-    "NGramEncoder", "FrequencyEncoder", "StackEncoder",
-    # Tension Minimization
-    "tension_energy", "minimize_tension", "build_cooc_graph",
-    "build_masses", "learn_distributional_hvs",
+    "GraphEncoder",
+    "HDCClassifier",
+    "HDCConfig",
+    # HAP
+    "HyperdimensionalActivePerception",
+    "NGramEncoder",
+    "PositionalIntensityEncoder",
+    "RefineHDLearner",
+    "SequenceEncoder",
+    "StackEncoder",
+    # Encoding
+    "TimeSliceEncoder",
+    "TreeEncoder",
+    "VelocityEncoder",
     # Capacity Analysis
-    "binomial_prob", "compute_hamming_statistics", "capacity_curve",
+    "binomial_prob",
+    "build_cooc_graph",
+    "build_masses",
+    "capacity_curve",
+    "cdt",
+    "compute_hamming_statistics",
+    "estimate_energy_sparse",
     "find_capacity_limit",
+    # Core
+    "gen_hvs",
+    "gen_sparse_basis",
+    # Sparse HDC
+    "gen_sparse_hvs",
+    "hv_batch_sim",
+    "hv_bind",
+    "hv_bundle",
+    "hv_consensus_sum",
+    "hv_hamming_sim",
+    "hv_majority",
+    "hv_permute",
+    "hv_popcount",
+    "hv_xor",
+    "learn_distributional_hvs",
+    "minimize_tension",
+    "sparse_bind",
+    "sparse_bundle",
+    "sparse_majority",
+    "sparse_overlap",
+    "sparse_similarity",
+    # Tension Minimization
+    "tension_energy",
 ]

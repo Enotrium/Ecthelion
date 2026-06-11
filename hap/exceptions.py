@@ -1,5 +1,4 @@
-"""
-HAP Exception Hierarchy — Domain-Specific Error Types
+"""HAP Exception Hierarchy — Domain-Specific Error Types
 =======================================================
 All exceptions raised by the HAP library inherit from `HAPError`,
 making it easy for callers to catch all HAP-specific errors with
@@ -7,7 +6,6 @@ a single except clause.
 """
 
 from __future__ import annotations
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Base Exception

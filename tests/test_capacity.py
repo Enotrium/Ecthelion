@@ -2,8 +2,8 @@
 
 from hap.capacity import (
     binomial_prob,
-    compute_hamming_statistics,
     capacity_curve,
+    compute_hamming_statistics,
     find_capacity_limit,
 )
 
@@ -37,8 +37,7 @@ class TestBinomialProb:
 class TestComputeHammingStatistics:
     def test_returns_keys(self):
         stats = compute_hamming_statistics(10, 0.0, 10000)
-        for key in ["H_n", "deviation_from_random", "z_score",
-                     "is_significant_3sigma"]:
+        for key in ["H_n", "deviation_from_random", "z_score", "is_significant_3sigma"]:
             assert key in stats
 
     def test_significance_at_low_n(self):

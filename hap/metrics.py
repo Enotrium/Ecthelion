@@ -1,5 +1,4 @@
-"""
-HAP Observability & Metrics — Prometheus / OpenTelemetry Integration
+"""HAP Observability & Metrics — Prometheus / OpenTelemetry Integration
 ======================================================================
 Optional instrumentation for production monitoring of HDC pipelines.
 
@@ -31,13 +30,12 @@ from __future__ import annotations
 import logging
 import time
 from contextlib import contextmanager
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 # ── Try importing prometheus_client (optional dependency) ─────
 try:
-    from prometheus_client import Counter, Histogram, start_http_server, Gauge
+    from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
     _PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -224,7 +222,7 @@ class HAPMetrics:
 
 # ── Module-level convenience ──────────────────────────────────
 
-_default_metrics: Optional[HAPMetrics] = None
+_default_metrics: HAPMetrics | None = None
 
 
 def get_metrics(dim: int = 10_000) -> HAPMetrics:

@@ -1,5 +1,4 @@
-"""
-Theoretical Capacity of Hyperdimensional Binary Vectors
+"""Theoretical Capacity of Hyperdimensional Binary Vectors
 ========================================================
 Implements the exact capacity formulas from the paper
 (Section "Theoretical limits on capacity of HBVs").
@@ -20,7 +19,6 @@ From this we compute:
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Tuple
 
 
 def binomial_prob(n_records: int, p_match: float) -> float:
@@ -92,7 +90,7 @@ def _binomial_exact(n: int, k: int) -> float:
     """P(X = k) for X ~ Binomial(n, 0.5)."""
     if k < 0 or k > n:
         return 0.0
-    return math.comb(n, k) / (2.0 ** n)
+    return math.comb(n, k) / (2.0**n)
 
 
 def _binomial_tail(n: int, a_input: int) -> float:
@@ -127,7 +125,7 @@ def _binomial_tail(n: int, a_input: int) -> float:
         binom = binom * (n - k) / (k + 1)
         total += binom
 
-    prob = total / (2.0 ** n)
+    prob = total / (2.0**n)
     return 1.0 - prob if complement else prob
 
 
@@ -135,7 +133,7 @@ def compute_hamming_statistics(
     n_records: int,
     p_match: float = 0.0,
     dim: int = 10_000,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Compute expected Hamming distance and statistical significance.
 
     When a record exists in memory (p_match = 0.0), the expected
@@ -180,7 +178,7 @@ def capacity_curve(
     max_records: int = 1000,
     dim: int = 10_000,
     z_threshold: float = 3.0,
-) -> List[Dict[str, float]]:
+) -> list[dict[str, float]]:
     """Compute capacity curve: how H_n deviates as n increases.
 
     This reproduces the curve from paper Figure 7 — as more records

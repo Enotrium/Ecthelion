@@ -23,13 +23,14 @@ ignore = [
     "PLR2004",  # magic-value-comparison (many physics constants)
     "SIM102",   # collapsible-if (explicit is clearer for HDC logic)
     "B904",     # raise-without-from-in-except (not always appropriate)
+    "B905",     # zip-without-explicit-strict (Python 3.10+; local dev on 3.9)
 ]
-per-file-ignores = {}
-extend-select = [
-    "D",   # pydocstyle
-]
-[tool.ruff.lint.pydocstyle]
-convention = "google"
+per-file-ignores = {
+    "tests/*" = ["D", "PLC0415", "N802", "B905", "F841", "RUF059", "RUF002"],
+    "hap/*" = ["RUF002", "D", "RUF003", "N806"],
+    "hap/sparse_hdc.py" = ["RUF002", "D", "RUF003", "N806", "E402"],
+    "hap/metrics.py" = ["RUF002", "D", "RUF003", "N806", "PLW0603"],
+}
 
 [format]
 quote-style = "double"

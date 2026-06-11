@@ -6,30 +6,33 @@ positional-intensity, time-slice, velocity, sequence,
 DVS event, and data record encoding.
 """
 
-import torch
 import pytest
+import torch
 
 from hap.encoding import (
+    DataRecordEncoder,
+    DVSEncoder,
     PositionalIntensityEncoder,
+    SequenceEncoder,
     TimeSliceEncoder,
     VelocityEncoder,
-    SequenceEncoder,
-    DVSEncoder,
-    DataRecordEncoder,
 )
 from hap.hdc_core import gen_hvs
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PositionalIntensityEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestPositionalIntensityEncoder:
     @pytest.fixture
     def encoder(self):
         return PositionalIntensityEncoder(
-            height=16, width=16, dim=500,
-            n_intensity_levels=64, seed=42,
+            height=16,
+            width=16,
+            dim=500,
+            n_intensity_levels=64,
+            seed=42,
         )
 
     def test_encode_shape(self, encoder):
@@ -85,7 +88,11 @@ class TestPositionalIntensityEncoder:
 
     def test_bipolar_mode(self):
         encoder = PositionalIntensityEncoder(
-            height=8, width=8, dim=200, mode="bipolar", seed=42,
+            height=8,
+            width=8,
+            dim=200,
+            mode="bipolar",
+            seed=42,
         )
         img = torch.rand(8, 8)
         hv = encoder.encode(img)
@@ -98,12 +105,16 @@ class TestPositionalIntensityEncoder:
 # TimeSliceEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestTimeSliceEncoder:
     @pytest.fixture
     def encoder(self):
         return TimeSliceEncoder(
-            height=32, width=32, dim=400,
-            intensity_levels=16, seed=42,
+            height=32,
+            width=32,
+            dim=400,
+            intensity_levels=16,
+            seed=42,
         )
 
     def test_encode_time_slice(self, encoder):
@@ -142,12 +153,16 @@ class TestTimeSliceEncoder:
 # VelocityEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVelocityEncoder:
     @pytest.fixture
     def encoder(self):
         return VelocityEncoder(
-            min_val=0.0, max_val=1.0, step=0.1,
-            dim=300, seed=42,
+            min_val=0.0,
+            max_val=1.0,
+            step=0.1,
+            dim=300,
+            seed=42,
         )
 
     def test_single_encode(self, encoder):
@@ -184,6 +199,7 @@ class TestVelocityEncoder:
         hv1 = encoder.encode(0.5)
         hv2 = encoder.encode(0.5001)
         from hap.hdc_core import hv_hamming_sim
+
         sim = hv_hamming_sim(hv1, hv2)
         assert sim > 0.9, f"Nearby velocities should be similar, got {sim}"
 
@@ -191,6 +207,7 @@ class TestVelocityEncoder:
         hv1 = encoder.encode(0.0)
         hv2 = encoder.encode(1.0)
         from hap.hdc_core import hv_hamming_sim
+
         sim = hv_hamming_sim(hv1, hv2)
         assert sim < 0.8, f"Distant velocities should differ, got {sim}"
 
@@ -198,6 +215,7 @@ class TestVelocityEncoder:
 # ═══════════════════════════════════════════════════════════════════════════════
 # SequenceEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestSequenceEncoder:
     @pytest.fixture
@@ -242,6 +260,7 @@ class TestSequenceEncoder:
 # ═══════════════════════════════════════════════════════════════════════════════
 # DVSEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestDVSEncoder:
     @pytest.fixture
@@ -293,12 +312,14 @@ class TestDVSEncoder:
 # DataRecordEncoder
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestDataRecordEncoder:
     @pytest.fixture
     def encoder(self):
         return DataRecordEncoder(
             field_names=["image", "velocity", "timestamp"],
-            dim=200, seed=42,
+            dim=200,
+            seed=42,
         )
 
     def test_encode_record(self, encoder):
@@ -307,7 +328,9 @@ class TestDataRecordEncoder:
         time_hv = gen_hvs(1, 200, seed=3).squeeze(0)
 
         record = encoder.encode_record(
-            image=img_hv, velocity=vel_hv, timestamp=time_hv,
+            image=img_hv,
+            velocity=vel_hv,
+            timestamp=time_hv,
         )
         assert record.shape == (200,)
 
@@ -317,7 +340,9 @@ class TestDataRecordEncoder:
         time_hv = gen_hvs(1, 200, seed=3).squeeze(0)
 
         record = encoder.encode_record(
-            image=img_hv, velocity=vel_hv, timestamp=time_hv,
+            image=img_hv,
+            velocity=vel_hv,
+            timestamp=time_hv,
         )
 
         # Query the image field
@@ -335,7 +360,9 @@ class TestDataRecordEncoder:
         scalar = torch.tensor(0.5)
         # Should handle scalar values
         record = encoder.encode_record(
-            image=vel_hv, velocity=scalar, timestamp=vel_hv,
+            image=vel_hv,
+            velocity=scalar,
+            timestamp=vel_hv,
         )
         assert record.shape == (200,)
 

@@ -1,5 +1,4 @@
-"""
-Tension Minimization for Distributional Semantics
+"""Tension Minimization for Distributional Semantics
 ==================================================
 Implements the full energy model from the paper (Section "Representing both
 numerical and categorical data in the same space"):
@@ -24,7 +23,6 @@ This produces geometrically meaningful HBV embeddings where:
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 import torch
 
@@ -57,8 +55,7 @@ def tension_energy(
     # Precompute Hamming distances between all vertex pairs: (m, m)
     h_dists = torch.zeros(m, m, device=device)
     for i in range(m):
-        h_dists[i] = 1.0 - hv_hamming_sim(hv_matrix[i].unsqueeze(0).expand(m, n),
-                                            hv_matrix).float()
+        h_dists[i] = 1.0 - hv_hamming_sim(hv_matrix[i].unsqueeze(0).expand(m, n), hv_matrix).float()
 
     total = 0.0
 
@@ -111,8 +108,8 @@ def minimize_tension(
     initial_temp: float = 10.0,
     cooling_rate: float = 0.995,
     disable_proximal: bool = False,
-    seed: Optional[int] = None,
-) -> Tuple[torch.Tensor, List[float]]:
+    seed: int | None = None,
+) -> tuple[torch.Tensor, list[float]]:
     """Minimize tension energy via simulated annealing.
 
     From the paper:
@@ -153,11 +150,11 @@ def minimize_tension(
         g.manual_seed(seed)
 
     hv = hv_matrix.clone()
-    energy_history: List[float] = []
+    energy_history: list[float] = []
 
     temp = initial_temp
 
-    for iteration in range(n_iters):
+    for _iteration in range(n_iters):
         # Compute current energy
         current_energy = tension_energy(hv, cooc_graph, masses)
         energy_history.append(current_energy)
@@ -195,7 +192,7 @@ def minimize_tension(
 
 
 def build_cooc_graph(
-    cooc_counts: Dict[Tuple[int, int], float],
+    cooc_counts: dict[tuple[int, int], float],
     n_vertices: int,
 ) -> torch.Tensor:
     """Build co-occurrence weight matrix from pair counts.
@@ -238,11 +235,11 @@ def build_masses(
 
 
 def learn_distributional_hvs(
-    cooc_counts: Dict[Tuple[int, int], float],
+    cooc_counts: dict[tuple[int, int], float],
     vertex_counts: torch.Tensor,
     dim: int = 10_000,
     n_iters: int = 5000,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> torch.Tensor:
     """Learn distributionally meaningful HVs from co-occurrence data.
 
@@ -276,9 +273,12 @@ def learn_distributional_hvs(
     masses = build_masses(vertex_counts)
 
     # Step 3: Minimize tension
-    hv_optimized, history = minimize_tension(
-        hv_matrix, cooc_graph, masses,
-        n_iters=n_iters, seed=seed,
+    hv_optimized, _history = minimize_tension(
+        hv_matrix,
+        cooc_graph,
+        masses,
+        n_iters=n_iters,
+        seed=seed,
     )
 
     return hv_optimized

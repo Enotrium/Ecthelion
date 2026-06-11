@@ -2,16 +2,17 @@
 
 import pytest
 import torch
+
 from hap.sparse_hdc import (
-    gen_sparse_hvs,
     cdt,
+    estimate_energy_sparse,
+    gen_sparse_basis,
+    gen_sparse_hvs,
+    sparse_bind,
     sparse_bundle,
     sparse_majority,
-    sparse_bind,
-    gen_sparse_basis,
-    sparse_similarity,
     sparse_overlap,
-    estimate_energy_sparse,
+    sparse_similarity,
 )
 
 
@@ -180,8 +181,7 @@ class TestSparseSimilarity:
 
 class TestEnergyModel:
     def test_estimate_energy_sparse(self):
-        result = estimate_energy_sparse(dim=10000, density=0.05,
-                                         n_or=100, n_cdt=100, n_xor=100)
+        result = estimate_energy_sparse(dim=10000, density=0.05, n_or=100, n_cdt=100, n_xor=100)
         assert "total_sparse_energy_pj" in result
         assert "total_sparse_energy_nj" in result
         assert result["total_sparse_energy_pj"] > 0

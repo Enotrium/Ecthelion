@@ -1,5 +1,4 @@
-"""
-HDC Associative Memory — Learning Is Just Counting Co-occurrences
+"""HDC Associative Memory — Learning Is Just Counting Co-occurrences
 ==================================================================
 "Train online, save counts as super position. See either more ones
  or more zeros and the original integers determine summation.
@@ -37,30 +36,15 @@ RefineHD extension (Verges Boncompte 2025, Chapter 4):
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-import torch.nn as nn
-
-from hap.exceptions import (
-    HAPMemoryError,
-    HAPInferenceError,
-    HAPSerializationError,
-    HAPDimensionError,
-)
 
 from hap.hdc_core import (
     gen_hvs,
-    hv_xor,
-    hv_bind,
-    hv_bundle,
-    hv_consensus_sum,
-    hv_majority,
-    hv_hamming_sim,
-    hv_popcount,
     hv_batch_sim,
-    HDCConfig,
+    hv_bind,
+    hv_hamming_sim,
+    hv_majority,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,9 +54,9 @@ logger = logging.getLogger(__name__)
 # 1. AssociativeMemory — Simple Percept→Action Binding
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class AssociativeMemory:
-    """
-    Basic associative memory: bind(percept, action) ⊕ consensus sum.
+    """Basic associative memory: bind(percept, action) ⊕ consensus sum.
 
     This is the vanilla HDC classifier from Kanerva (2009) and the paper.
 
@@ -106,7 +90,7 @@ class AssociativeMemory:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.dim = dim
         self.mode = mode
@@ -148,8 +132,9 @@ class AssociativeMemory:
         for p, a in zip(percepts, actions):
             self.train(p, a)
 
-    def infer(self, percept: torch.Tensor,
-              action_candidates: torch.Tensor) -> Tuple[int, torch.Tensor]:
+    def infer(
+        self, percept: torch.Tensor, action_candidates: torch.Tensor
+    ) -> tuple[int, torch.Tensor]:
         """Infer best-matching action for a percept.
 
         Unbind memory with percept and compare to action candidates.
@@ -191,12 +176,15 @@ class AssociativeMemory:
 
     def save(self, path: str) -> None:
         """Save memory to file."""
-        torch.save({
-            "memory": self._memory,
-            "n_samples": self._n_samples,
-            "dim": self.dim,
-            "mode": self.mode,
-        }, path)
+        torch.save(
+            {
+                "memory": self._memory,
+                "n_samples": self._n_samples,
+                "dim": self.dim,
+                "mode": self.mode,
+            },
+            path,
+        )
 
     def load(self, path: str) -> None:
         """Load memory from file."""
@@ -211,9 +199,9 @@ class AssociativeMemory:
 # 2. ActionPerceptionMemory — Explicit Perception→Action Mapping
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class ActionPerceptionMemory:
-    """
-    HAP core memory: stores multiple action memories as data records.
+    """HAP core memory: stores multiple action memories as data records.
 
     From the paper (Section "Perception to action binding with HBVs"):
         "The memory m stores the history of the data records of a size
@@ -222,7 +210,7 @@ class ActionPerceptionMemory:
     Specifically, the memory stores:
         m = XOR_bind(encoded_velocity, encoded_images)
 
-    where:    
+    where:
         m = Σ P^k(velocity_k) ⊗ image_k   (for time steps k)
 
     "A data record format is created: for each time slice, we construct
@@ -244,7 +232,7 @@ class ActionPerceptionMemory:
         n_classes: int = 500,
         dim: int = 8_000,
         mode: str = "binary",
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.n_classes = n_classes
         self.dim = dim
@@ -262,7 +250,7 @@ class ActionPerceptionMemory:
 
         From the paper:
             "m = memory + XOR(velocity_class, image_vector)"
-        
+
         The action (velocity class) acts as a key that binds the percept.
         When we query with a new percept, the memory unbinds to reveal
         which velocity classes were associated with similar percepts.
@@ -274,7 +262,7 @@ class ActionPerceptionMemory:
         self._class_memories[class_idx] += percept
         self._class_counts[class_idx] += 1
 
-    def infer(self, percept: torch.Tensor) -> Tuple[int, torch.Tensor]:
+    def infer(self, percept: torch.Tensor) -> tuple[int, torch.Tensor]:
         """Find class with smallest Hamming distance to percept.
 
         From the paper:
@@ -294,13 +282,14 @@ class ActionPerceptionMemory:
         best_idx = sims.argmax().item()
         return best_idx, sims
 
-    def get_velocity_class(self, query: torch.Tensor,
-                           velocity_keys: torch.Tensor) -> Tuple[int, float]:
+    def get_velocity_class(
+        self, query: torch.Tensor, velocity_keys: torch.Tensor
+    ) -> tuple[int, float]:
         """Alternative inference: unbind memory with velocity key.
 
         From the paper, Eq 4:
             "p(v_i) = P(bind(m, v_i), d)"
-        
+
         Unbind memory with velocity key, then compare to image:
             p(v_i) = 1 - H_n(bind(m, v_i), d)
 
@@ -336,7 +325,7 @@ class ActionPerceptionMemory:
 
         The consensus memory per class is the bundle:
             memory[c] = majority(mean(percepts_for_class_c))
-        
+
         Returns per-class thresholded memories stacked as (K, D).
         """
         counts = self._class_counts.unsqueeze(-1).clamp(min=1)
@@ -347,13 +336,16 @@ class ActionPerceptionMemory:
         self._class_counts.zero_()
 
     def save(self, path: str) -> None:
-        torch.save({
-            "class_memories": self._class_memories,
-            "class_counts": self._class_counts,
-            "n_classes": self.n_classes,
-            "dim": self.dim,
-            "mode": self.mode,
-        }, path)
+        torch.save(
+            {
+                "class_memories": self._class_memories,
+                "class_counts": self._class_counts,
+                "n_classes": self.n_classes,
+                "dim": self.dim,
+                "mode": self.mode,
+            },
+            path,
+        )
 
     def load(self, path: str) -> None:
         data = torch.load(path, map_location=self.device)
@@ -368,9 +360,9 @@ class ActionPerceptionMemory:
 # 3. DataRecordMemory — Sliding Window Data Records
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class DataRecordMemory:
-    """
-    Sliding window memory that stores recent data records as bound pairs.
+    """Sliding window memory that stores recent data records as bound pairs.
 
     From the paper (Section "Properties of HBVs", item 5):
         "A memory m has the capacity to store about D records.
@@ -396,14 +388,14 @@ class DataRecordMemory:
         window_size: int = 700,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.window_size = window_size
         self.dim = dim
         self.mode = mode
         self.device = device or "cpu"
         self._memory = torch.zeros(dim, device=self.device)
-        self._records: List[Tuple[torch.Tensor, torch.Tensor]] = []
+        self._records: list[tuple[torch.Tensor, torch.Tensor]] = []
         self._n_records = 0
 
     @property
@@ -436,8 +428,9 @@ class DataRecordMemory:
         self._memory = self._memory + bound
         self._n_records += 1
 
-    def infer(self, percept: torch.Tensor,
-              action_candidates: torch.Tensor) -> Tuple[int, torch.Tensor]:
+    def infer(
+        self, percept: torch.Tensor, action_candidates: torch.Tensor
+    ) -> tuple[int, torch.Tensor]:
         """Infer action for percept using thresholded memory.
 
         Args:
@@ -466,9 +459,9 @@ class DataRecordMemory:
 # 4. HDCClassifier — Multi-Class Classifier
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class HDCClassifier:
-    """
-    Full multi-class HDC classifier with class-specific label HVs.
+    """Full multi-class HDC classifier with class-specific label HVs.
 
     For each class k:
         class_hv[k] = bound random HV (the class prototype)
@@ -491,8 +484,8 @@ class HDCClassifier:
         n_classes: int,
         dim: int = 10_000,
         mode: str = "binary",
-        device: Optional[str] = None,
-        seed: Optional[int] = None,
+        device: str | None = None,
+        seed: int | None = None,
     ):
         self.n_classes = n_classes
         self.dim = dim
@@ -506,9 +499,9 @@ class HDCClassifier:
         self.memory = AssociativeMemory(dim, mode, self.device)
 
         # Label cache for training convenience
-        self._labels: List[int] = []
+        self._labels: list[int] = []
 
-    def fit(self, percepts: torch.Tensor, labels: List[int]) -> None:
+    def fit(self, percepts: torch.Tensor, labels: list[int]) -> None:
         """Train on a dataset.
 
         All percepts are bound to their class HV and bundled.
@@ -538,7 +531,7 @@ class HDCClassifier:
         best_idx, _ = self.memory.infer(percept, self.class_hvs)
         return best_idx
 
-    def predict_batch(self, percepts: torch.Tensor) -> List[int]:
+    def predict_batch(self, percepts: torch.Tensor) -> list[int]:
         """Predict class for a batch of percepts.
 
         Args:
@@ -552,8 +545,7 @@ class HDCClassifier:
             predictions.append(self.predict(p))
         return predictions
 
-    def accuracy(self, percepts: torch.Tensor,
-                 true_labels: List[int]) -> float:
+    def accuracy(self, percepts: torch.Tensor, true_labels: list[int]) -> float:
         """Compute classification accuracy.
 
         Args:
@@ -568,14 +560,17 @@ class HDCClassifier:
         return correct / len(true_labels)
 
     def save(self, path: str) -> None:
-        torch.save({
-            "class_hvs": self.class_hvs,
-            "memory": self.memory._memory,
-            "n_samples": self.memory._n_samples,
-            "n_classes": self.n_classes,
-            "dim": self.dim,
-            "mode": self.mode,
-        }, path)
+        torch.save(
+            {
+                "class_hvs": self.class_hvs,
+                "memory": self.memory._memory,
+                "n_samples": self.memory._n_samples,
+                "n_classes": self.n_classes,
+                "dim": self.dim,
+                "mode": self.mode,
+            },
+            path,
+        )
 
     def load(self, path: str) -> None:
         data = torch.load(path, map_location=self.device)
@@ -595,9 +590,9 @@ class HDCClassifier:
 # 5. RefineHDLearner — Adaptive Refinement
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class RefineHDLearner:
-    """
-    RefineHD: Iterative refinement for misclassified samples.
+    """RefineHD: Iterative refinement for misclassified samples.
 
     From Verges Boncompte (2025), Chapter 4:
         "RefineHD: Adaptive Learning for HD Computing."
@@ -631,9 +626,9 @@ class RefineHDLearner:
         self.classifier = classifier
         self.n_rounds = n_refinement_rounds
         self.refinement_weight = refinement_weight
-        self._history: List[Dict] = []
+        self._history: list[dict] = []
 
-    def fit(self, percepts: torch.Tensor, labels: List[int]) -> Dict:
+    def fit(self, percepts: torch.Tensor, labels: list[int]) -> dict:
         """Train with refinement.
 
         Args:
@@ -643,8 +638,7 @@ class RefineHDLearner:
         Returns:
             Dict with accuracy history per round
         """
-        dim = percepts.shape[-1]
-        device = percepts.device
+        percepts.shape[-1]
 
         # Step 1: Initial training
         self.classifier.fit(percepts, labels)
@@ -668,20 +662,18 @@ class RefineHDLearner:
 
                     # Add weighted correction to memory
                     # Increase correct class, decrease wrong class
-                    self.classifier.memory._memory += (
-                        self.refinement_weight * bound_correct
-                    )
-                    self.classifier.memory._memory -= (
-                        (self.refinement_weight - 1.0) * bound_wrong
-                    )
+                    self.classifier.memory._memory += self.refinement_weight * bound_correct
+                    self.classifier.memory._memory -= (self.refinement_weight - 1.0) * bound_wrong
                     misclassified += 1
 
             acc = self.classifier.accuracy(percepts, labels)
-            self._history.append({
-                "round": rnd,
-                "accuracy": acc,
-                "misclassified": misclassified,
-            })
+            self._history.append(
+                {
+                    "round": rnd,
+                    "accuracy": acc,
+                    "misclassified": misclassified,
+                }
+            )
 
         return {
             "initial_accuracy": acc,

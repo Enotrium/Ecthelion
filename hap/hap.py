@@ -1,5 +1,4 @@
-"""
-Hyperdimensional Active Perception (HAP) — Top-Level Framework
+"""Hyperdimensional Active Perception (HAP) — Top-Level Framework
 ===============================================================
 "Push the job onto encoding. Purely hardware. Then push encoding
  as far away from actual learning that you can learn very rapidly."
@@ -21,25 +20,22 @@ The pipeline:
 from __future__ import annotations
 
 import logging
-import math
 import time
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 
-from hap.hdc_core import (
-    gen_hvs, hv_xor, hv_bind, hv_bundle, hv_permute,
-    hv_popcount, hv_hamming_sim, hv_batch_sim, hv_majority,
-    estimate_energy_hdv, HDCConfig,
-    ENERGY_XOR_PJ, ENERGY_POPCOUNT_PJ, ENERGY_BIT_ADD_PJ,
-)
 from hap.encoding import (
-    TimeSliceEncoder, VelocityEncoder, SequenceEncoder,
-    DVSEncoder, PositionalIntensityEncoder, DataRecordEncoder,
+    TimeSliceEncoder,
+    VelocityEncoder,
+)
+from hap.hdc_core import (
+    estimate_energy_hdv,
+    hv_bind,
+    hv_hamming_sim,
 )
 from hap.memory import (
-    AssociativeMemory, ActionPerceptionMemory, DataRecordMemory,
-    HDCClassifier, RefineHDLearner,
+    ActionPerceptionMemory,
+    AssociativeMemory,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,9 +45,9 @@ logger = logging.getLogger(__name__)
 # HyperdimensionalActivePerception — General Framework
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class HyperdimensionalActivePerception:
-    """
-    General HAP framework: perception → encoding → memory → action.
+    """General HAP framework: perception → encoding → memory → action.
 
     This class orchestrates the full pipeline:
         Sensor data → Encoder(HVs) → Memory(bind) → Inference
@@ -74,9 +70,9 @@ class HyperdimensionalActivePerception:
         self,
         dim: int = 10_000,
         mode: str = "binary",
-        encoder: Optional[object] = None,
-        memory: Optional[object] = None,
-        seed: Optional[int] = None,
+        encoder: object | None = None,
+        memory: object | None = None,
+        seed: int | None = None,
     ):
         if dim < 2:
             raise ValueError(f"HV dimension must be at least 2, got {dim}")
@@ -127,8 +123,9 @@ class HyperdimensionalActivePerception:
         self._train_time += time.perf_counter() - t0
         self._n_train += 1
 
-    def decide(self, percept: torch.Tensor,
-               action_candidates: torch.Tensor) -> Tuple[int, torch.Tensor]:
+    def decide(
+        self, percept: torch.Tensor, action_candidates: torch.Tensor
+    ) -> tuple[int, torch.Tensor]:
         """Infer best action for a percept.
 
         Args:
@@ -145,7 +142,7 @@ class HyperdimensionalActivePerception:
         return idx, sims
 
     @property
-    def stats(self) -> Dict:
+    def stats(self) -> dict:
         """Get performance statistics.
 
         Returns:
@@ -180,7 +177,7 @@ class HyperdimensionalActivePerception:
         self._infer_time = 0.0
         self._n_train = 0
         self._n_infer = 0
-        if hasattr(self.memory, 'clear'):
+        if hasattr(self.memory, "clear"):
             self.memory.clear()
 
 
@@ -188,9 +185,9 @@ class HyperdimensionalActivePerception:
 # EgoMotionEstimator — MVSEC-Style Ego-Motion from DVS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class EgoMotionEstimator:
-    """
-    Ego-motion estimation from DVS event data using HBVs.
+    """Ego-motion estimation from DVS event data using HBVs.
 
     From the paper (Section "Experiment 2: Ego-motion perception"):
         "We formulate the problem of estimating ego-motion of the
@@ -231,7 +228,7 @@ class EgoMotionEstimator:
         n_linear_x_bins: int = 47,
         n_linear_z_bins: int = 119,
         velocity_step: float = 0.001,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
         if dim < 10:
             raise ValueError(f"HV dimension must be at least 10, got {dim}")
@@ -246,47 +243,59 @@ class EgoMotionEstimator:
 
         # ── Encoders ─────────────────────────────────────────────────────
         self.time_encoder = TimeSliceEncoder(
-            height=height, width=width, dim=dim, seed=s,
+            height=height,
+            width=width,
+            dim=dim,
+            seed=s,
         )
 
         self.angular_encoder = VelocityEncoder(
-            min_val=0.0, max_val=n_angular_bins * velocity_step,
-            step=velocity_step, dim=dim, seed=s + 1,
+            min_val=0.0,
+            max_val=n_angular_bins * velocity_step,
+            step=velocity_step,
+            dim=dim,
+            seed=s + 1,
         )
         self.linear_x_encoder = VelocityEncoder(
-            min_val=0.0, max_val=n_linear_x_bins * velocity_step,
-            step=velocity_step, dim=dim, seed=s + 2,
+            min_val=0.0,
+            max_val=n_linear_x_bins * velocity_step,
+            step=velocity_step,
+            dim=dim,
+            seed=s + 2,
         )
         self.linear_z_encoder = VelocityEncoder(
-            min_val=0.0, max_val=n_linear_z_bins * velocity_step,
-            step=velocity_step, dim=dim, seed=s + 3,
+            min_val=0.0,
+            max_val=n_linear_z_bins * velocity_step,
+            step=velocity_step,
+            dim=dim,
+            seed=s + 3,
         )
 
         # ── Per-class memories: one for each velocity DOF ────────────────
         self.angular_mem = ActionPerceptionMemory(
-            n_classes=n_angular_bins, dim=dim,
+            n_classes=n_angular_bins,
+            dim=dim,
         )
         self.linear_x_mem = ActionPerceptionMemory(
-            n_classes=n_linear_x_bins, dim=dim,
+            n_classes=n_linear_x_bins,
+            dim=dim,
         )
         self.linear_z_mem = ActionPerceptionMemory(
-            n_classes=n_linear_z_bins, dim=dim,
+            n_classes=n_linear_z_bins,
+            dim=dim,
         )
 
         # ── Pre-compute all velocity class HVs for fast inference ────────
         # These are the "v_i" vectors in the paper's p(v_i) = P(bind(m, v_i), d)
-        self._angular_class_hvs = torch.stack([
-            self.angular_encoder.encode(i * velocity_step)
-            for i in range(n_angular_bins)
-        ])
-        self._linear_x_class_hvs = torch.stack([
-            self.linear_x_encoder.encode(i * velocity_step)
-            for i in range(n_linear_x_bins)
-        ])
-        self._linear_z_class_hvs = torch.stack([
-            self.linear_z_encoder.encode(i * velocity_step)
-            for i in range(n_linear_z_bins)
-        ])
+        self._angular_class_hvs = torch.stack(
+            [self.angular_encoder.encode(i * velocity_step) for i in range(n_angular_bins)]
+        )
+        self._linear_x_class_hvs = torch.stack(
+            [self.linear_x_encoder.encode(i * velocity_step) for i in range(n_linear_x_bins)]
+        )
+        self._linear_z_class_hvs = torch.stack(
+            [self.linear_z_encoder.encode(i * velocity_step) for i in range(n_linear_z_bins)]
+        )
 
         # ── Metrics ─────────────────────────────────────────────────────
         self._train_time = 0.0
@@ -304,9 +313,9 @@ class EgoMotionEstimator:
         """
         return self.time_encoder.encode_time_slice(time_image)
 
-    def encode_velocity(self, angular: float,
-                         linear_x: float,
-                         linear_z: float) -> Tuple[torch.Tensor, ...]:
+    def encode_velocity(
+        self, angular: float, linear_x: float, linear_z: float
+    ) -> tuple[torch.Tensor, ...]:
         """Encode 3-DOF velocity into three HVs.
 
         Args:
@@ -323,10 +332,9 @@ class EgoMotionEstimator:
             self.linear_z_encoder.encode(linear_z),
         )
 
-    def train(self, time_image: torch.Tensor,
-              angular: float,
-              linear_x: float,
-              linear_z: float) -> None:
+    def train(
+        self, time_image: torch.Tensor, angular: float, linear_x: float, linear_z: float
+    ) -> None:
         """Train on one (time_image, velocity) sample.
 
         The paper's training rule:
@@ -366,7 +374,7 @@ class EgoMotionEstimator:
         self._train_time += time.perf_counter() - t0
         self._total_train_samples += 1
 
-    def infer(self, time_image: torch.Tensor) -> Dict[str, float]:
+    def infer(self, time_image: torch.Tensor) -> dict[str, float]:
         """Infer velocity from a time image.
 
         From the paper (Equation 4):
@@ -433,7 +441,7 @@ class EgoMotionEstimator:
             "linear_z_prob": lz_sims[lz_best].item(),
         }
 
-    def infer_batch(self, time_images: torch.Tensor) -> List[Dict]:
+    def infer_batch(self, time_images: torch.Tensor) -> list[dict]:
         """Infer velocities for a batch of time images.
 
         Args:
@@ -446,11 +454,11 @@ class EgoMotionEstimator:
 
     def _velocity_to_idx(self, velocity: float, n_classes: int) -> int:
         """Convert velocity to class index with bounds checking."""
-        idx = int(round(velocity / self.velocity_step))
+        idx = round(velocity / self.velocity_step)
         return max(0, min(idx, n_classes - 1))
 
     @property
-    def stats(self) -> Dict:
+    def stats(self) -> dict:
         """Get detailed performance statistics."""
         train_samples = max(self._total_train_samples, 1)
         return {
@@ -467,25 +475,30 @@ class EgoMotionEstimator:
 
     def save(self, path: str) -> None:
         """Save estimator state to disk."""
-        torch.save({
-            "angular_mem": {
-                "memories": self.angular_mem._class_memories,
-                "counts": self.angular_mem._class_counts,
+        torch.save(
+            {
+                "angular_mem": {
+                    "memories": self.angular_mem._class_memories,
+                    "counts": self.angular_mem._class_counts,
+                },
+                "linear_x_mem": {
+                    "memories": self.linear_x_mem._class_memories,
+                    "counts": self.linear_x_mem._class_counts,
+                },
+                "linear_z_mem": {
+                    "memories": self.linear_z_mem._class_memories,
+                    "counts": self.linear_z_mem._class_counts,
+                },
+                "config": {
+                    "width": self.width,
+                    "height": self.height,
+                    "dim": self.dim,
+                    "velocity_step": self.velocity_step,
+                },
+                "total_train_samples": self._total_train_samples,
             },
-            "linear_x_mem": {
-                "memories": self.linear_x_mem._class_memories,
-                "counts": self.linear_x_mem._class_counts,
-            },
-            "linear_z_mem": {
-                "memories": self.linear_z_mem._class_memories,
-                "counts": self.linear_z_mem._class_counts,
-            },
-            "config": {
-                "width": self.width, "height": self.height,
-                "dim": self.dim, "velocity_step": self.velocity_step,
-            },
-            "total_train_samples": self._total_train_samples,
-        }, path)
+            path,
+        )
 
     def load(self, path: str) -> None:
         """Load estimator state from disk."""
