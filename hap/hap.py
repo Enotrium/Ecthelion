@@ -396,24 +396,30 @@ class EgoMotionEstimator:
         lz_mem_thresh = self.linear_z_mem._threshold_memory()
 
         # Angular: find best velocity class
+        # _threshold_memory() returns per-class memories as (n_classes, D).
+        # For each class i, unbind the class-specific memory with the velocity
+        # key v_i to recover the expected image pattern, then compare to query.
         ang_sims = torch.zeros(self.angular_mem.n_classes, device=img_hv.device)
         for i in range(self.angular_mem.n_classes):
-            unbound = hv_bind(ang_mem_thresh, self._angular_class_hvs[i])
-            ang_sims[i] = hv_hamming_sim(unbound, img_hv)
+            if self.angular_mem._class_counts[i] > 0:
+                unbound = hv_bind(ang_mem_thresh[i], self._angular_class_hvs[i])
+                ang_sims[i] = hv_hamming_sim(unbound, img_hv)
         ang_best = ang_sims.argmax().item()
 
         # Linear X
         lx_sims = torch.zeros(self.linear_x_mem.n_classes, device=img_hv.device)
         for i in range(self.linear_x_mem.n_classes):
-            unbound = hv_bind(lx_mem_thresh, self._linear_x_class_hvs[i])
-            lx_sims[i] = hv_hamming_sim(unbound, img_hv)
+            if self.linear_x_mem._class_counts[i] > 0:
+                unbound = hv_bind(lx_mem_thresh[i], self._linear_x_class_hvs[i])
+                lx_sims[i] = hv_hamming_sim(unbound, img_hv)
         lx_best = lx_sims.argmax().item()
 
         # Linear Z
         lz_sims = torch.zeros(self.linear_z_mem.n_classes, device=img_hv.device)
         for i in range(self.linear_z_mem.n_classes):
-            unbound = hv_bind(lz_mem_thresh, self._linear_z_class_hvs[i])
-            lz_sims[i] = hv_hamming_sim(unbound, img_hv)
+            if self.linear_z_mem._class_counts[i] > 0:
+                unbound = hv_bind(lz_mem_thresh[i], self._linear_z_class_hvs[i])
+                lz_sims[i] = hv_hamming_sim(unbound, img_hv)
         lz_best = lz_sims.argmax().item()
 
         self._infer_count += 1

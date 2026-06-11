@@ -314,13 +314,20 @@ class ActionPerceptionMemory:
         best_prob = -1.0
         best_idx = 0
 
+        # _threshold_memory() returns per-class memories stacked as (K, D).
+        # For each velocity key, iterate over trained class memories
+        # and keep the best match.
+        mem = self._threshold_memory()  # (n_classes, D)
+
         for i, v_key in enumerate(velocity_keys):
             # Unbind: bind(m, v_i) ≈ image that was paired with velocity v_i
-            unbound = hv_bind(self._threshold_memory(), v_key, self.mode)
-            prob = hv_hamming_sim(unbound, query)
-            if prob > best_prob:
-                best_prob = prob
-                best_idx = i
+            for c in range(self.n_classes):
+                if self._class_counts[c] > 0:
+                    unbound = hv_bind(mem[c], v_key, self.mode)
+                    prob = hv_hamming_sim(unbound, query).item()
+                    if prob > best_prob:
+                        best_prob = prob
+                        best_idx = i
 
         return best_idx, best_prob
 
@@ -641,8 +648,8 @@ class RefineHDLearner:
 
         # Step 1: Initial training
         self.classifier.fit(percepts, labels)
-        init_acc = self.classifier.accuracy(percepts, labels)
-        self._history = [{"round": 0, "accuracy": init_acc}]
+        acc = self.classifier.accuracy(percepts, labels)
+        self._history = [{"round": 0, "accuracy": acc}]
 
         # Step 2: Refinement rounds
         for rnd in range(1, self.n_rounds + 1):
@@ -677,7 +684,7 @@ class RefineHDLearner:
             })
 
         return {
-            "initial_accuracy": init_acc,
+            "initial_accuracy": acc,
             "final_accuracy": acc,
             "history": self._history,
         }

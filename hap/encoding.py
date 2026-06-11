@@ -348,12 +348,24 @@ class VelocityEncoder(nn.Module):
 
         n_basis = max(1, int((max_val - min_val) / step) + 1)
 
-        # Build basis velocity HVs via progressive interpolation
-        base = gen_hvs(n_basis, dim, mode, self.device, seed)
-        levels = [base[0]]
-        for i in range(1, n_basis):
-            mixed = 0.7 * levels[-1] + 0.3 * base[i]
-            levels.append(hv_majority(mixed))
+        # Build basis velocity HVs via progressive interpolation.
+        # Use two random anchors and interpolate between them so that
+        # each step along the basis line changes a controlled fraction
+        # of bits — avoiding the recursive-collapse problem where
+        # 0.7·prev + 0.3·new converges to a single vector.
+        if n_basis == 1:
+            anchor = hv_majority(gen_hvs(1, dim, mode, self.device, seed)[0])
+            levels = [anchor]
+        else:
+            anchors = gen_hvs(2, dim, mode, self.device, seed)
+            anchor_a = hv_majority(anchors[0])
+            anchor_b = hv_majority(anchors[1])
+            levels = []
+            for i in range(n_basis):
+                t = i / (n_basis - 1)  # 0 → anchor_a, 1 → anchor_b
+                # Fraction of anchor_b bits to flip into anchor_a
+                mixed = (1.0 - t) * anchor_a + t * anchor_b
+                levels.append(hv_majority(mixed))
 
         self.register_buffer("basis", torch.stack(levels))
         self.n_basis = n_basis
@@ -480,7 +492,13 @@ class SequenceEncoder:
                         T: int) -> torch.Tensor:
         """Remove oldest element from sequence.
 
-        seq' = P^(-1)(XOR(seq, P^(T-1)(old)))
+        seq' = XOR(seq, P^(T-1)(old))
+
+        The original encoding is:
+            seq = P^(T-1)(old) XOR P^(T-2)(v_1) XOR ... XOR P^0(v_{T-1})
+        Removing old = XOR(seq, P^(T-1)(old)), which yields:
+            P^(T-2)(v_1) XOR ... XOR P^0(v_{T-1})
+        This is exactly equal to encoding seq[1:].
 
         Args:
             seq_hv: Current sequence HV
@@ -488,11 +506,10 @@ class SequenceEncoder:
             T: Current sequence length
 
         Returns:
-            Updated sequence HV
+            Updated sequence HV (equivalent to encoding seq[1:])
         """
         shifted_old = hv_permute(old_hv, (T - 1) * self.permute_k)
-        removed = hv_xor(seq_hv, shifted_old)
-        return hv_permute(removed, -self.permute_k)
+        return hv_xor(seq_hv, shifted_old)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
