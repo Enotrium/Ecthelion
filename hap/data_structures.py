@@ -4,7 +4,7 @@ HDC Data Structure Representations — Graphs, Trees, FSA, N-Grams
 Extends the data record / set / sequence primitives from the paper
 into more complex relational abstractions.
 
-From Kleyko et al., "A Comprehensive Study of Complexity and Performance
+ Complexity and Performance
 of Automatic Detection of Atrial Fibrillation: Classification with
 Hyperdimensional Computing" and the HDC/VSA Data Structures Cookbook.
 
@@ -26,6 +26,7 @@ Each structure supports:
 
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
@@ -39,6 +40,8 @@ from hap.hdc_core import (
     hv_batch_sim,
     hv_hamming_sim,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

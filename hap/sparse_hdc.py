@@ -22,9 +22,12 @@ Key operations:
 
 from __future__ import annotations
 
+import logging
 from typing import Dict, Optional, Tuple
 
 import torch
+
+logger = logging.getLogger(__name__)
 
 from hap.hdc_core import (
     hv_xor,

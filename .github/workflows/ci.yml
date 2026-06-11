@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv pip install --system ruff mypy
+      - run: ruff check hap/ tests/
+      - run: ruff format --check hap/ tests/
+      - run: mypy hap/ --ignore-missing-imports --no-error-summary || true
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          uv pip install --system .[all]
+      - name: Run tests with coverage
+        run: |
+          python -m pytest tests/ -v --tb=short --cov=hap --cov-report=term-missing --cov-report=xml --cov-fail-under=75
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    name: Build & Verify Package
+    runs-on: ubuntu-24.04
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - name: Build package
+        run: |
+          uv pip install --system build twine
+          python -m build
+      - name: Validate package
+        run: |
+          python -m twine check dist/*
+      - name: Install from wheel and run smoke test
+        run: |
+          uv pip install --system dist/*.whl
+          python -c "from hap import gen_hvs, hv_xor, hv_bundle, hv_permute, hv_hamming_sim; hvs=gen_hvs(10,1000,seed=1); assert hv_hamming_sim(hvs[0],hvs[1]) != 1.0; print('PASS')"
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-24.04
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t ecthelion-hap .
+      - name: Smoke test in container
+        run: docker run --rm ecthelion-hap python3 -c "from hap import gen_hvs, hv_xor, hv_bundle; hvs=gen_hvs(10,1000,seed=1); print('Docker OK')"

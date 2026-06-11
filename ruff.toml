@@ -1,0 +1,40 @@
+# ── Ruff Linting & Formatting Configuration ──────────────────
+# HAP framework: strict but pragmatic rules for production HDC code.
+
+target-version = "py310"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "PL",  # pylint
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "PLR0913",  # too-many-arguments (common for HDC constructors)
+    "PLR2004",  # magic-value-comparison (many physics constants)
+    "SIM102",   # collapsible-if (explicit is clearer for HDC logic)
+    "B904",     # raise-without-from-in-except (not always appropriate)
+]
+per-file-ignores = {}
+extend-select = [
+    "D",   # pydocstyle
+]
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[lint.isort]
+known-first-party = ["hap"]

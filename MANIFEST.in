@@ -1,0 +1,23 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include pyproject.toml
+include Dockerfile
+include docker-compose.yml
+include .dockerignore
+
+recursive-include hap *.py
+recursive-include tests *.py
+recursive-include docs *.md *.png *.jpeg
+
+exclude .gitignore
+exclude .pre-commit-config.yaml
+exclude ruff.toml
+exclude .github/workflows/ci.yml
+
+prune __pycache__
+prune .mypy_cache
+prune .pytest_cache
+prune .eggs
+prune build
+prune dist

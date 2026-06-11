@@ -27,11 +27,16 @@ Hardware properties (45nm CMOS, Horowitz ISSCC 2014):
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
+
+from hap.exceptions import HAPDimensionError, HAPModeError
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

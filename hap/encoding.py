@@ -26,11 +26,14 @@ Production improvements over research code:
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+
+from hap.exceptions import HAPDimensionError, HAPEncodingError, HAPConfigError
 
 from hap.hdc_core import (
     gen_hvs,
@@ -44,6 +47,8 @@ from hap.hdc_core import (
     hv_batch_sim,
     HDCConfig,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

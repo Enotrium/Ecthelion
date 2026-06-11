@@ -22,10 +22,48 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "matplotlib>=3.7"]
+dev = ["pytest>=7.0", "pytest-cov>=6.0", "matplotlib>=3.7"]
 demo = ["matplotlib>=3.7"]
-all = ["pytest>=7.0", "matplotlib>=3.7"]
+all = ["pytest>=7.0", "pytest-cov>=6.0", "matplotlib>=3.7"]
+docs = ["sphinx>=7.0", "sphinx-rtd-theme>=2.0", "myst-parser>=3.0"]
+metrics = ["prometheus-client>=0.21"]
+
+[project.urls]
+Homepage = "https://github.com/Enotrium/Ecthelion"
+Repository = "https://github.com/Enotrium/Ecthelion"
+Issues = "https://github.com/Enotrium/Ecthelion/issues"
+Changelog = "https://github.com/Enotrium/Ecthelion/blob/main/CHANGELOG.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["hap"]
+omit = ["tests/*", "hap/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 75
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+exclude = ["tests/", "docs/"]
+
+[tool.ruff]
+target-version = "py310"

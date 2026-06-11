@@ -36,11 +36,19 @@ RefineHD extension (Verges Boncompte 2025, Chapter 4):
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+
+from hap.exceptions import (
+    HAPMemoryError,
+    HAPInferenceError,
+    HAPSerializationError,
+    HAPDimensionError,
+)
 
 from hap.hdc_core import (
     gen_hvs,
@@ -54,6 +62,8 @@ from hap.hdc_core import (
     hv_batch_sim,
     HDCConfig,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -2,9 +2,7 @@
 Hyperdimensional Active Perception (HAP) Framework
 ===================================================
 Production-grade implementation of:
-
-  Mitrokhin, Sutor, Fermüller, Aloimonos (2019)
-  "Learning Sensorimotor Control with Neuromorphic Sensors:
+Learning Sensorimotor Control with Neuromorphic Sensors:
    Toward Hyperdimensional Active Perception"
   Science Robotics, vol. 4, no. 30, eaaw6736
 

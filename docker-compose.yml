@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  hap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: ecthelion-hap:latest
+    container_name: hap-runtime
+    volumes:
+      - ./models:/workspace/models
+      - ./logs:/workspace/logs
+      - ./data:/workspace/data
+    environment:
+      - HAP_DIM=10000
+      - HAP_MODE=binary
+      - HAP_DEVICE=cpu
+      - LOG_LEVEL=INFO
+    stdin_open: true
+    tty: true
+    command: ["python3", "-c", "from hap import gen_hvs, hv_xor, hv_bundle; print('HAP runtime ready')"]
+
+  hap-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: ecthelion-hap:latest
+    container_name: hap-test
+    profiles: ["test"]
+    environment:
+      - LOG_LEVEL=DEBUG
+    command: ["python3", "-m", "pytest", "tests/", "-v", "--tb=short"]
+
+  hap-demo-online:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: ecthelion-hap:latest
+    container_name: hap-demo-online
+    profiles: ["demo"]
+    stdin_open: true
+    tty: true
+    command: ["python3", "demo_online_learning.py"]
+
+  hap-demo-ego:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: ecthelion-hap:latest
+    container_name: hap-demo-ego
+    profiles: ["demo"]
+    stdin_open: true
+    tty: true
+    command: ["python3", "demo_ego_motion.py"]
